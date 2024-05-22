@@ -37,9 +37,13 @@ The component enhances user experience by providing timely alerts and essential 
 
 ![Dismissable Modal Popup Example](./img/Screenshot%202024-05-21%20155951.png)
 
-## Usage
+## Documentation
 
-To use the `ScheduledMaintenanceComponent`, include it in your Lightning page or another component as follows:
+For mor information please checkout the [Wiki](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki) for this repo. It incldes information like:
+- [A Component Overview](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki)
+- [Installation Guide](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/Installation)
+- [Details about the Object & Fields](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/Object-and-Fields)
+- [Details about the LWC HTML](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/ScheduledMaintenanceComponent-HTML)
+- [Details about the LWC Javascript](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/ScheduledMaintenanceComponent-JavaScript)
+- [Details about the Apex class](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/ScheduledMaintenanceService-Class)
 
-```html
-<c-scheduled-maintenance-component current-app-context="YourAppContext"></c-scheduled-maintenance-component>
