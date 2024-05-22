@@ -1,0 +1,74 @@
+<!-- sldsValidatorIgnore -->
+<template>
+    <template if:true={isModalOpen}>
+        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <template if:true={isDismissible}>
+                        <template if:false={isFullLock}>
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={dismissAllRecords}>
+                                <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                        </template>                        
+                    </template>
+                    <h2 class="slds-text-heading_large">{title}</h2>
+                    <template if:false={isDismissible}>
+                        <div class="slds-m-top_large">
+                            <lightning-badge label="This App is Closed" class="slds-m-left_medium slds-badge slds-theme_warning"></lightning-badge>
+                        </div>
+                        <p class="slds-m-top_x-small">To see why this app is closed please review the below items.</p>
+                    </template>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" style="overflow: auto;">
+                    <!-- Render accordion if isInMaintenance is true -->
+                    <template if:true={isInMaintenance}>
+                        <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>
+                            <template for:each={scheduledMaintenances} for:item="maint">
+                                <lightning-accordion-section key={maint.Id} name={maint.Id} label={maint.Subject}>
+                                    <div class="slds-box slds-theme_default slds-var-m-bottom_small">
+                                        <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
+                                        <p><strong>Start:</strong> {maint.Start_Date_Time__c}</p>
+                                        <p><strong>End:</strong> {maint.End_Date_Time__c}</p>
+                                        <div class="slds-m-top_x-small">
+                                            <template if:false={maint.Dismissible__c}>
+                                                <lightning-badge label={maint.BadgeLabel} class="slds-m-left_xx-small slds-m-top_x-small"></lightning-badge>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </lightning-accordion-section>
+                            </template>
+                        </lightning-accordion>
+                    </template>
+                        <!-- Render blocks if isInMaintenance is false -->
+                    <template if:false={isInMaintenance}>
+                        <template for:each={scheduledMaintenances} for:item="maint">
+                            <div key={maint.Id} class="slds-box slds-theme_default slds-var-m-bottom_small">
+                                <h2 class="slds-text-heading_small slds-var-m-bottom_small"><strong>{maint.Subject}</strong></h2>
+                                <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
+                                <p><strong>Start:</strong> {maint.Start_Date_Time__c}</p>
+                                <p><strong>End:</strong> {maint.End_Date_Time__c}</p>
+                                <template if:false={maint.Dismissible__c}>
+                                    <lightning-badge label={maint.BadgeLabel} class="slds-m-left_xx-small slds-m-top_x-small"></lightning-badge>
+                                </template>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <template if:false={isDismissible}>
+                        <template if:false={isFullLock}>
+                            <lightning-button variant="neutral" label="Navigate to Welcome App" title="Navigate to Welcome App" onclick={navigateToApp}></lightning-button>
+                        </template>
+                    </template>
+                    <template if:true={isDismissible}>
+                        <template if:false={isFullLock}>
+                            <lightning-button variant="neutral" label="Dismiss" title="Dismiss" onclick={dismissAllRecords}></lightning-button>
+                        </template>
+                    </template>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>
