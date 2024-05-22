@@ -2,7 +2,10 @@
   "packageDirectories": [
     {
       "path": "force-app",
-      "default": true
+      "default": true,
+      "package": "UnmanagedPackage",
+      "versionName": "ver 1.0",
+      "versionNumber": "1.0.0.NEXT"
     }
   ],
   "name": "ScheduledMaintenanceComponent",
