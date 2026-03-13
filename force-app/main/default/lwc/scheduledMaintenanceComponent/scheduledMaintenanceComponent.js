@@ -51,8 +51,9 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         this.scheduledMaintenances = data.filter(record => this.shouldShowAlert(record, now))
             .map(record => ({
                 ...record,
-                Start_Date_Time__c: this.formatDateTime(record.Start_Date_Time__c),
-                End_Date_Time__c: this.formatDateTime(record.End_Date_Time__c),
+                // Always parse as UTC
+                Start_Date_Time__c: this.formatDateTimeUTC(record.Start_Date_Time__c),
+                End_Date_Time__c: this.formatDateTimeUTC(record.End_Date_Time__c),
                 Dismissible: this.calculateDismissible(record, now),
                 Subject: record.Subject__c,
                 BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : ''
@@ -62,8 +63,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         }
         // Check maintenance status
         data.some(record => {
-            const startDate = new Date(record.Start_Date_Time__c);
-            const endDate = new Date(record.End_Date_Time__c);
+            const startDate = this.parseUTCDate(record.Start_Date_Time__c);
+            const endDate = this.parseUTCDate(record.End_Date_Time__c);
             const isCurrent = now >= startDate && now <= endDate;
 
             if (isCurrent) {
@@ -106,13 +107,13 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     updateDismissibleStatus() {
         const now = new Date();
         this.isFullLock = this.scheduledMaintenances.some(record => {
-            const startDate = new Date(record.Start_Date_Time__c);
-            const endDate = new Date(record.End_Date_Time__c);
+            const startDate = this.parseUTCDate(record.Start_Date_Time__c);
+            const endDate = this.parseUTCDate(record.End_Date_Time__c);
             return record.Applicable_Apps__c.includes('System') && now >= startDate && now <= endDate && !record.Dismissible__c;
         });
         this.isDismissible = !this.isFullLock && this.scheduledMaintenances.every(record => {
-            const startDate = new Date(record.Start_Date_Time__c);
-            const endDate = new Date(record.End_Date_Time__c);
+            const startDate = this.parseUTCDate(record.Start_Date_Time__c);
+            const endDate = this.parseUTCDate(record.End_Date_Time__c);
             return now < startDate || now > endDate || record.Dismissible__c;
         });
         console.log('Is Dismissible: ' + this.isDismissible);
@@ -124,8 +125,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Determines if a record is dismissible based on its start and end times.
     calculateDismissible(record, now) {
-        const startDate = new Date(record.Start_Date_Time__c);
-        const endDate = new Date(record.End_Date_Time__c);
+        const startDate = this.parseUTCDate(record.Start_Date_Time__c);
+        const endDate = this.parseUTCDate(record.End_Date_Time__c);
         if (now >= startDate && now <= endDate && !record.Dismissible__c) {
             return false; 
         }
@@ -166,13 +167,13 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     
     // Determines if an alert should be shown based on its timing and dismissibility.
     shouldShowAlert(record, currentDate) {
-        const startDate = new Date(record.Start_Date_Time__c);
-        const endDate = new Date(record.End_Date_Time__c);
+        const startDate = this.parseUTCDate(record.Start_Date_Time__c);
+        const endDate = this.parseUTCDate(record.End_Date_Time__c);
         if (currentDate >= startDate && currentDate <= endDate && !record.Dismissible__c) {
             return true;
         }
         const lastDismissedDate = localStorage.getItem(`maintenanceDismissed_${record.Id}`);
-        const lastDismissed = lastDismissedDate ? new Date(lastDismissedDate) : null;
+        const lastDismissed = lastDismissedDate ? this.parseUTCDate(lastDismissedDate) : null;
         return !lastDismissed || this.frequencyAllowsAlert(record.Alert_Frequency__c, lastDismissed, currentDate);
     }
     // Determines if a maintenance alert should be repeated based on its frequency and the last dismissal date.
@@ -183,19 +184,30 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             case 'Daily':
                 return !lastDismissed || lastDismissed.toISOString().slice(0, 10) !== currentDate.toISOString().slice(0, 10);
             case 'Weekly':
-                let oneWeekAgo = new Date(currentDate);
-                oneWeekAgo.setDate(currentDate.getDate() - 7);
+                let oneWeekAgo = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate() - 7));
                 return !lastDismissed || lastDismissed < oneWeekAgo;
             default:
                 return true;
         }
     }
-    // Formats date and time strings for display.
-    formatDateTime(dateTime) {
+    // Formats date and time strings for display (UTC)
+    formatDateTimeUTC(dateTime) {
+        if (!dateTime) return '';
+        const d = this.parseUTCDate(dateTime);
         return new Intl.DateTimeFormat('en-US', {
             year: '2-digit', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hour12: true
-        }).format(new Date(dateTime));
+            hour: '2-digit', minute: '2-digit', hour12: true,
+            timeZone: 'UTC'
+        }).format(d);
+    }
+
+    // Parse a date string as UTC (expects ISO 8601 with Z)
+    parseUTCDate(dateString) {
+        if (!dateString) return null;
+        // If already a Date, return as is
+        if (dateString instanceof Date) return dateString;
+        // Always parse as UTC
+        return new Date(dateString);
     }
     
 }
