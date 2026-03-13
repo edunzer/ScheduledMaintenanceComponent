@@ -1,27 +1,41 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
 import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
-    @track scheduledMaintenances = []; // Tracks the state of maintenance records
-    @track appId = null;               // Stores the App ID for navigation
-    @track isModalOpen = false;        // Controls the visibility of the modal
-    @track isDismissible = true;       // Determines if the modal can be dismissed
-    @track isSystemMaintenance = false;// Indicates if there's an active system-wide maintenance
-    @track isInMaintenance = false;    // Indicates if one of the records is in the maintenance window 
-    @track isFullLock = false;         // Indicates if the application is fully locked due to maintenance
-    @api title = 'Scheduled Maintenance Alert'; // Default Title
-    @api currentAppContext;            // Public property for application context
-    @track activeSectionName = '';     // Stores the name of the active section in accordion
-
-    intervalId = null;                 // Interval ID for clearing intervals
+    @track scheduledMaintenances = [];
+    @track appId = null;
+    @track isModalOpen = false;
+    @track isDismissible = true;
+    @track isSystemMaintenance = false;
+    @track isInMaintenance = false;
+    @track isFullLock = false;
+    @api title = 'Scheduled Maintenance Alert';
+    @api currentAppContext;
+    @track activeSectionName = '';
+    @track userTimeZone = null;
+    @track userLocale = null;
+    intervalId = null;
 
     // Lifecycle hook that's called after the component is inserted into the DOM.
     connectedCallback() {
         this.fetchAppId();
-        this.fetchScheduledMaintenances(); // Initial fetch
-        this.setupIntervals();
+        // Fetch user locale/timezone first, then fetch maintenances
+        getUserLocaleInfo()
+            .then(info => {
+                this.userTimeZone = info.timeZone;
+                this.userLocale = info.locale;
+            })
+            .catch(() => {
+                this.userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                this.userLocale = navigator.language || 'en-US';
+            })
+            .finally(() => {
+                this.fetchScheduledMaintenances();
+                this.setupIntervals();
+            });
     }
 
     disconnectedCallback() {
@@ -48,12 +62,14 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Processes the fetched scheduled maintenances
     processScheduledMaintenances(data, now) {
+        // Use user's locale and timezone for formatting
+        const userLocale = this.userLocale || navigator.language || 'en-US';
+        const userTimeZone = this.userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         this.scheduledMaintenances = data.filter(record => this.shouldShowAlert(record, now))
             .map(record => ({
                 ...record,
-                // Always parse as UTC
-                Start_Date_Time__c: this.formatDateTimeUTC(record.Start_Date_Time__c),
-                End_Date_Time__c: this.formatDateTimeUTC(record.End_Date_Time__c),
+                Start_Date_Time__c: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
+                End_Date_Time__c: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
                 Dismissible: this.calculateDismissible(record, now),
                 Subject: record.Subject__c,
                 BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : ''
@@ -190,15 +206,30 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 return true;
         }
     }
-    // Formats date and time strings for display (UTC)
-    formatDateTimeUTC(dateTime) {
+
+    // Formats date and time strings for display in user's local timezone and locale
+    formatDateTimeLocal(dateTime, locale, timeZone) {
         if (!dateTime) return '';
         const d = this.parseUTCDate(dateTime);
-        return new Intl.DateTimeFormat('en-US', {
-            year: '2-digit', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hour12: true,
-            timeZone: 'UTC'
-        }).format(d);
+        // Fix locale if it uses underscore (e.g., en_AU -> en-AU)
+        let safeLocale = locale;
+        if (typeof safeLocale === 'string' && safeLocale.includes('_')) {
+            safeLocale = safeLocale.replace('_', '-');
+        }
+        try {
+            return d.toLocaleString(safeLocale, {
+                year: '2-digit', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hour12: true,
+                timeZone: timeZone
+            });
+        } catch (e) {
+            // fallback to default locale
+            return d.toLocaleString(undefined, {
+                year: '2-digit', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hour12: true,
+                timeZone: timeZone
+            });
+        }
     }
 
     // Parse a date string as UTC (expects ISO 8601 with Z)
