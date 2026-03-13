@@ -34,8 +34,23 @@ The component enhances user experience by providing timely alerts and essential 
   - Provides visual cues (e.g., badges) for alerts requiring system or app lock.
 - **User Navigation**: Facilitates navigation to another application based on the fetched App ID.
 - **Adaptive Titles**: Updates the title of the modal based on the current maintenance status.
+- **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
+- **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
 
 ![Dismissable Modal Popup Example](./img/Screenshot%202024-05-21%20155951.png)
+
+## Changelog
+
+### v1.1.0
+
+- **Locale-aware Date/Time Display**: Maintenance start and end times are now formatted using the user's Salesforce locale and timezone settings. The Apex service returns date fields as UTC ISO 8601 strings, which the component then converts to the user's local time for display.
+- **Applicable Apps Badges**: The maintenance modal now displays each applicable app as a visual badge, making it easier to understand which systems are affected by a scheduled maintenance.
+- **User Locale and Timezone Retrieval**: A new Apex method (`getUserLocaleInfo`) retrieves the running user's locale and timezone (`TimeZoneSidKey`, `LocaleSidKey`) to support accurate local date formatting in the component. If retrieval fails, the component falls back to browser defaults.
+- **UTC Date Handling in Apex**: The `getActiveScheduledMaintenances` method now returns a list of plain objects with all date fields formatted as UTC ISO 8601 strings (`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`), ensuring consistent timezone-safe date handling on the client side.
+- **SOQL Injection Prevention**: Filter values passed to the SOQL query are now escaped using `String.escapeSingleQuotes()`, preventing potential SOQL injection vulnerabilities.
+- **SOQL Error Handling**: The `getActiveScheduledMaintenances` method now wraps the database query in a try/catch block, returning an empty list on failure instead of throwing an unhandled exception.
+- **SOQL Datetime Formatting**: The current datetime used in the SOQL query is now formatted in ISO 8601 format (`yyyy-MM-dd'T'HH:mm:ss'Z'`) for accurate querying of scheduled maintenance records.
+- **Code Comment Fix**: The comment in `disconnectedCallback` now correctly describes that a timeout is cleared (not an interval).
 
 ## Documentation
 
