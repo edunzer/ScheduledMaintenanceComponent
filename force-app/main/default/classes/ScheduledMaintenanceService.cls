@@ -1,7 +1,7 @@
 public with sharing class ScheduledMaintenanceService {
     // Retrieves active scheduled maintenances applicable to the specified app context.
     @AuraEnabled(cacheable=false)
-    public static List<Scheduled_Maintenance__c> getActiveScheduledMaintenances(String appContext) {
+    public static List<Object> getActiveScheduledMaintenances(String appContext) {
         // Record the current date and time.
         DateTime now = DateTime.now();
         System.debug('Current DateTime used: ' + now);
@@ -34,10 +34,26 @@ public with sharing class ScheduledMaintenanceService {
             List<Scheduled_Maintenance__c> records = Database.query(queryString);
             // Log the number of records fetched.
             System.debug('Fetched records: ' + records.size());
-            return records;
+            // Convert date fields to UTC ISO strings for each record
+            List<Map<String, Object>> result = new List<Map<String, Object>>();
+            for (Scheduled_Maintenance__c rec : records) {
+                Map<String, Object> m = new Map<String, Object>();
+                m.put('Id', rec.Id);
+                m.put('Name', rec.Name);
+                m.put('Start_Date_Time__c', rec.Start_Date_Time__c != null ? rec.Start_Date_Time__c.formatGMT('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'') : null);
+                m.put('End_Date_Time__c', rec.End_Date_Time__c != null ? rec.End_Date_Time__c.formatGMT('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'') : null);
+                m.put('Subject__c', rec.Subject__c);
+                m.put('Description__c', rec.Description__c);
+                m.put('Alert_Frequency__c', rec.Alert_Frequency__c);
+                m.put('Start_Date_with_Buffer__c', rec.Start_Date_with_Buffer__c != null ? rec.Start_Date_with_Buffer__c.formatGMT('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'') : null);
+                m.put('Dismissible__c', rec.Dismissible__c);
+                m.put('Applicable_Apps__c', rec.Applicable_Apps__c);
+                result.add(m);
+            }
+            return (List<Object>)result;
         } catch (Exception ex) {
             System.debug('Exception during Database.query: ' + ex.getMessage());
-            return new List<Scheduled_Maintenance__c>();
+            return new List<Object>();
         }
     }
 

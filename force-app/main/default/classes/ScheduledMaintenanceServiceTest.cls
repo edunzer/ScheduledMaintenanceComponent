@@ -53,42 +53,47 @@ public class ScheduledMaintenanceServiceTest {
         Test.startTest();
 
         // Test with no app context (should include only 'System')
-        List<Scheduled_Maintenance__c> results = ScheduledMaintenanceService.getActiveScheduledMaintenances(null);
+        List<Object> results = ScheduledMaintenanceService.getActiveScheduledMaintenances(null);
         System.debug('Results for no context: ' + results);
-        for (Scheduled_Maintenance__c maint : results) {
-            System.debug('Record for no context: ' + maint + ', Applicable_Apps__c: ' + maint.Applicable_Apps__c);
+        for (Object o : results) {
+            Map<String, Object> maint = (Map<String, Object>)o;
+            System.debug('Record for no context: ' + maint + ', Applicable_Apps__c: ' + maint.get('Applicable_Apps__c'));
         }
         System.assertEquals(1, results.size(), 'There should be 1 active maintenance record for System');
 
         // Test with app context 'System'
         results = ScheduledMaintenanceService.getActiveScheduledMaintenances('System');
         System.debug('Results for System context: ' + results);
-        for (Scheduled_Maintenance__c maint : results) {
-            System.debug('Record for System context: ' + maint + ', Applicable_Apps__c: ' + maint.Applicable_Apps__c);
+        for (Object o : results) {
+            Map<String, Object> maint = (Map<String, Object>)o;
+            System.debug('Record for System context: ' + maint + ', Applicable_Apps__c: ' + maint.get('Applicable_Apps__c'));
         }
         System.assertEquals(1, results.size(), 'There should be 1 active maintenance record for System');
 
         // Test with app context 'CRM'
         results = ScheduledMaintenanceService.getActiveScheduledMaintenances('CRM');
         System.debug('Results for CRM context: ' + results);
-        for (Scheduled_Maintenance__c maint : results) {
-            System.debug('Record for CRM context: ' + maint + ', Applicable_Apps__c: ' + maint.Applicable_Apps__c);
+        for (Object o : results) {
+            Map<String, Object> maint = (Map<String, Object>)o;
+            System.debug('Record for CRM context: ' + maint + ', Applicable_Apps__c: ' + maint.get('Applicable_Apps__c'));
         }
         System.assertEquals(1, results.size(), 'There should be 1 active maintenance records for CRM');
 
         // Test with app context 'SMS'
         results = ScheduledMaintenanceService.getActiveScheduledMaintenances('SMS');
         System.debug('Results for SMS context: ' + results);
-        for (Scheduled_Maintenance__c maint : results) {
-            System.debug('Record for SMS context: ' + maint + ', Applicable_Apps__c: ' + maint.Applicable_Apps__c);
+        for (Object o : results) {
+            Map<String, Object> maint = (Map<String, Object>)o;
+            System.debug('Record for SMS context: ' + maint + ', Applicable_Apps__c: ' + maint.get('Applicable_Apps__c'));
         }
         System.assertEquals(2, results.size(), 'There should be 2 active maintenance record for SMS');
 
         // Test with app context 'PSA'
         results = ScheduledMaintenanceService.getActiveScheduledMaintenances('PSA');
         System.debug('Results for PSA context: ' + results);
-        for (Scheduled_Maintenance__c maint : results) {
-            System.debug('Record for PSA context: ' + maint + ', Applicable_Apps__c: ' + maint.Applicable_Apps__c);
+        for (Object o : results) {
+            Map<String, Object> maint = (Map<String, Object>)o;
+            System.debug('Record for PSA context: ' + maint + ', Applicable_Apps__c: ' + maint.get('Applicable_Apps__c'));
         }
         System.assertEquals(2, results.size(), 'There should be 2 active maintenance record for PSA');
 
