@@ -12,8 +12,13 @@ public with sharing class ScheduledMaintenanceService {
             filters.add(appContext);
         }
 
+        // Escape each filter value to prevent SOQL injection and breakage.
+        List<String> escapedFilters = new List<String>();
+        for (String f : filters) {
+            escapedFilters.add(String.escapeSingleQuotes(f));
+        }
         // Concatenate all filters into a single string formatted for a SOQL query's INCLUDES clause.
-        String filterString = '\'' + String.join(filters, '\',\'') + '\'';
+        String filterString = '\'' + String.join(escapedFilters, '\',\'') + '\'';
         System.debug('Using filter: ' + filterString);
         // Format the current datetime for SOQL (ISO8601 format)
         String nowStr = now.format('yyyy-MM-dd\'T\'HH:mm:ss\'Z\'');
