@@ -69,4 +69,14 @@ public with sharing class ScheduledMaintenanceService {
         // Return null if no matching app is found.
         return null;
     }
+
+    // Retrieves the running user's timezone and locale
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getUserLocaleInfo() {
+        User u = [SELECT Id, TimeZoneSidKey, LocaleSidKey FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('timeZone', u.TimeZoneSidKey);
+        result.put('locale', u.LocaleSidKey);
+        return result;
+    }
 }
