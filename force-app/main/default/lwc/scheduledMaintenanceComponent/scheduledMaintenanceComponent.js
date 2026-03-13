@@ -68,8 +68,9 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         this.scheduledMaintenances = data.filter(record => this.shouldShowAlert(record, now))
             .map(record => ({
                 ...record,
-                Start_Date_Time__c: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
-                End_Date_Time__c: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
+                // Preserve raw ISO values for logic
+                startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
+                endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
                 Dismissible: this.calculateDismissible(record, now),
                 Subject: record.Subject__c,
                 BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : ''
