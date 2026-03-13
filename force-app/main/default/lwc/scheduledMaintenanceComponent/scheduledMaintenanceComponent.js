@@ -25,9 +25,9 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     }
 
     disconnectedCallback() {
-        // Clear intervals when the component is destroyed
+        // Clear timeout when the component is destroyed
         if (this.intervalId) {
-            clearInterval(this.intervalId);
+            clearTimeout(this.intervalId);
         }
     }
 
