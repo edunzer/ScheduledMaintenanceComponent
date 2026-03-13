@@ -66,15 +66,24 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         const userLocale = this.userLocale || navigator.language || 'en-US';
         const userTimeZone = this.userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         this.scheduledMaintenances = data.filter(record => this.shouldShowAlert(record, now))
-            .map(record => ({
-                ...record,
-                // Preserve raw ISO values for logic
-                startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
-                endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
-                Dismissible: this.calculateDismissible(record, now),
-                Subject: record.Subject__c,
-                BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : ''
-            }));
+            .map(record => {
+                // Parse apps for badge display
+                let appBadges = [];
+                if (record.Applicable_Apps__c) {
+                    // Multi-select picklists in Salesforce use ';' as delimiter
+                    appBadges = record.Applicable_Apps__c.split(';').map(app => app.trim()).filter(app => !!app);
+                }
+                return {
+                    ...record,
+                    // Preserve raw ISO values for logic
+                    startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
+                    endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
+                    Dismissible: this.calculateDismissible(record, now),
+                    Subject: record.Subject__c,
+                    BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : '',
+                    appBadges
+                };
+            });
         if (this.scheduledMaintenances.length > 0) {
             this.activeSectionName = this.scheduledMaintenances[0].Id;
         }
