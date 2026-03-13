@@ -24,11 +24,16 @@ public with sharing class ScheduledMaintenanceService {
                      'AND Applicable_Apps__c INCLUDES (' + filterString + ')' + 
                      'ORDER BY Start_Date_Time__c ASC'; // Orders the results by the start date.
 
-        // Execute the query and retrieve the list of scheduled maintenance records.
-        List<Scheduled_Maintenance__c> records = Database.query(queryString);
-        // Log the number of records fetched.
-        System.debug('Fetched records: ' + records.size());
-        return records;
+        try {
+            // Execute the query and retrieve the list of scheduled maintenance records.
+            List<Scheduled_Maintenance__c> records = Database.query(queryString);
+            // Log the number of records fetched.
+            System.debug('Fetched records: ' + records.size());
+            return records;
+        } catch (Exception ex) {
+            System.debug('Exception during Database.query: ' + ex.getMessage());
+            return new List<Scheduled_Maintenance__c>();
+        }
     }
 
     // Retrieves the App ID based on the developer name specified, useful for navigation purposes.
