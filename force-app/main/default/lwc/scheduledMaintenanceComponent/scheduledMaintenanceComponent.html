@@ -1,7 +1,15 @@
 <!-- sldsValidatorIgnore -->
 <template>
     <template if:true={isModalOpen}>
-        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+        <section
+            role="dialog"
+            tabindex="-1"
+            aria-modal="true"
+            aria-labelledby="modal-heading-01"
+            aria-describedby="modal-content-01"
+            class="slds-modal slds-fade-in-open"
+            onkeydown={handleKeyDown}
+        >
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <template if:true={isDismissible}>
@@ -12,7 +20,7 @@
                             </button>
                         </template>                        
                     </template>
-                    <h2 class="slds-text-heading_large">{title}</h2>
+                    <h2 id="modal-heading-01" class="slds-text-heading_large">{title}</h2>
                     <template if:false={isDismissible}>
                         <div class="slds-m-top_large">
                             <lightning-badge label="This App is Closed" class="slds-m-left_medium slds-badge slds-theme_warning"></lightning-badge>
@@ -20,7 +28,7 @@
                         <p class="slds-m-top_x-small">To see why this app is closed please review the below items.</p>
                     </template>
                 </header>
-                <div class="slds-modal__content slds-p-around_medium" style="overflow: auto;">
+                <div id="modal-content-01" class="slds-modal__content slds-p-around_medium" style="overflow: auto;">
                     <!-- Render accordion if isInMaintenance is true -->
                     <template if:true={isInMaintenance}>
                         <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>

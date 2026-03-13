@@ -18,6 +18,9 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     @track userTimeZone = null;
     @track userLocale = null;
     intervalId = null;
+    _previousIsModalOpen = false;
+    _focusableSelectors =
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
     // Lifecycle hook that's called after the component is inserted into the DOM.
     connectedCallback() {
@@ -42,6 +45,39 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         // Clear timeout when the component is destroyed
         if (this.intervalId) {
             clearTimeout(this.intervalId);
+        }
+    }
+
+    // Moves focus to the first focusable element when the modal opens
+    renderedCallback() {
+        if (this.isModalOpen && !this._previousIsModalOpen) {
+            const firstFocusable = this.template.querySelector(this._focusableSelectors);
+            if (firstFocusable) {
+                firstFocusable.focus();
+            }
+        }
+        this._previousIsModalOpen = this.isModalOpen;
+    }
+
+    // Handles keyboard events for Escape (dismiss) and Tab (focus trapping)
+    handleKeyDown(event) {
+        if (event.key === 'Escape' && this.isDismissible && !this.isFullLock) {
+            this.dismissAllRecords();
+            return;
+        }
+        if (event.key === 'Tab') {
+            const focusable = [...this.template.querySelectorAll(this._focusableSelectors)];
+            if (focusable.length === 0) return;
+            const firstEl = focusable[0];
+            const lastEl = focusable[focusable.length - 1];
+            const activeEl = this.template.activeElement;
+            if (event.shiftKey && activeEl === firstEl) {
+                event.preventDefault();
+                lastEl.focus();
+            } else if (!event.shiftKey && activeEl === lastEl) {
+                event.preventDefault();
+                firstEl.focus();
+            }
         }
     }
 
