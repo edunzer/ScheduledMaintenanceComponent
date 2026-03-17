@@ -56,7 +56,6 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 this.processScheduledMaintenances(data, now);
             })
             .catch(error => {
-                console.error('Error fetching maintenance records:', error);
                 this.scheduledMaintenances = [];
                 this.isModalOpen = false;
             });
@@ -68,22 +67,21 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         const userLocale = this.userLocale || navigator.language || 'en-US';
         const userTimeZone = this.userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         // Map and format all records first
-        const allRecords = data.filter(record => this.shouldShowAlert(record, now))
-            .map(record => {
-                let appBadges = [];
-                if (record.Applicable_Apps__c) {
-                    appBadges = record.Applicable_Apps__c.split(';').map(app => app.trim()).filter(app => !!app);
-                }
-                return {
-                    ...record,
-                    startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
-                    endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
-                    Dismissible: this.calculateDismissible(record, now),
-                    Subject: record.Subject__c,
-                    BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : '',
-                    appBadges
-                };
-            });
+        const allRecords = data.filter(record => this.shouldShowAlert(record, now)).map(record => {
+            let appBadges = [];
+            if (record.Applicable_Apps__c) {
+                appBadges = record.Applicable_Apps__c.split(';').map(app => app.trim()).filter(app => !!app);
+            }
+            return {
+                ...record,
+                startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
+                endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
+                Dismissible: this.calculateDismissible(record, now),
+                Subject: record.Subject__c,
+                BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : '',
+                appBadges
+            };
+        });
 
         // Split into in progress and upcoming
         const inProgress = [];
@@ -213,10 +211,21 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     }
     // Dismisses all records by updating their last dismissed date.
     dismissAllRecords() {
+        // Load or initialize the dismissal array
+        let dismissedArr = [];
+        try {
+            dismissedArr = JSON.parse(localStorage.getItem('scheduledMaintenance_dismissed')) || [];
+        } catch (e) {
+            dismissedArr = [];
+        }
+        const now = new Date().toISOString();
         this.scheduledMaintenances.forEach(record => {
-            const today = new Date().toISOString().slice(0, 10);
-            localStorage.setItem(`maintenanceDismissed_${record.Id}`, today);
+            // Remove any previous dismissal for this record
+            dismissedArr = dismissedArr.filter(item => item.recordId !== record.Id);
+            // Add new dismissal
+            dismissedArr.push({ recordId: record.Id, dismissedAt: now });
         });
+        localStorage.setItem('scheduledMaintenance_dismissed', JSON.stringify(dismissedArr));
         this.isModalOpen = false;
     }
     
@@ -227,8 +236,19 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         if (currentDate >= startDate && currentDate <= endDate && !record.Dismissible__c) {
             return true;
         }
-        const lastDismissedDate = localStorage.getItem(`maintenanceDismissed_${record.Id}`);
-        const lastDismissed = lastDismissedDate ? this.parseUTCDate(lastDismissedDate) : null;
+        // Load dismissals array
+        let dismissedArr = [];
+        try {
+            dismissedArr = JSON.parse(localStorage.getItem('scheduledMaintenance_dismissed')) || [];
+        } catch (e) {
+            dismissedArr = [];
+        }
+        // Find the most recent dismissal for this record
+        const dismissal = dismissedArr.find(item => item.recordId === record.Id);
+        let lastDismissed = null;
+        if (dismissal) {
+            lastDismissed = this.parseUTCDate(dismissal.dismissedAt);
+        }
         return !lastDismissed || this.frequencyAllowsAlert(record.Alert_Frequency__c, lastDismissed, currentDate);
     }
     // Determines if a maintenance alert should be repeated based on its frequency and the last dismissal date.
