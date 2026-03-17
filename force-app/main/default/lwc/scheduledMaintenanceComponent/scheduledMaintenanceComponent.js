@@ -163,6 +163,12 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         fetchAndSetupNextInterval();
     }
 
+    // True when the modal can be closed/dismissed (no active non-dismissible maintenance).
+    // isDismissible already implies !isFullLock, so the two flags are always consistent.
+    get showNavigateButton() {
+        return !this.isDismissible && !this.isFullLock;
+    }
+
     // Updates the dismissible status based on system admin rights or maintenance conditions.
     updateDismissibleStatus() {
         const now = new Date();
