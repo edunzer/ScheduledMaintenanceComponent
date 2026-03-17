@@ -15,8 +15,6 @@ Key features include:
 
 The component enhances user experience by providing timely alerts and essential information about maintenance activities, ensuring users are informed about potential disruptions. This can be done before the actual maintenance time if you want using the `Alert Buffer` field.
 
-![Modal Popup Example](./img/Screenshot%202026-03-13%20151025.png)
-
 ## Features
 
 - **Real-time Data Fetching**: Fetches scheduled maintenance data immediately upon initial load.
@@ -37,7 +35,13 @@ The component enhances user experience by providing timely alerts and essential 
 - **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
 
-![Dismissable Modal Popup Example](./img/Screenshot%202026-03-13%20150809.png)
+## Examples
+- **Non Dismissable**
+  - ![NonDismissable Modal Inprogress And Upcoming](./img/Screenshot%202026-03-17%20150537.png)
+- **Dismissable with Inprogress and Upcoming**
+  - ![Dismissable Modal Inprogress And Upcoming](./img/Screenshot%202026-03-17%20150601.png)
+- **Dismissiable with Upcoming**
+  - ![Dismissable Modal Upcoming](./img/Screenshot%202026-03-17%20150702.png)
 
 ## Changelog
 
