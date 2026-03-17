@@ -6,6 +6,8 @@ import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
     @track scheduledMaintenances = [];
+    @track inProgressMaintenances = [];
+    @track upcomingMaintenances = [];
     @track appId = null;
     @track isModalOpen = false;
     @track isDismissible = true;
@@ -65,17 +67,15 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         // Use user's locale and timezone for formatting
         const userLocale = this.userLocale || navigator.language || 'en-US';
         const userTimeZone = this.userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-        this.scheduledMaintenances = data.filter(record => this.shouldShowAlert(record, now))
+        // Map and format all records first
+        const allRecords = data.filter(record => this.shouldShowAlert(record, now))
             .map(record => {
-                // Parse apps for badge display
                 let appBadges = [];
                 if (record.Applicable_Apps__c) {
-                    // Multi-select picklists in Salesforce use ';' as delimiter
                     appBadges = record.Applicable_Apps__c.split(';').map(app => app.trim()).filter(app => !!app);
                 }
                 return {
                     ...record,
-                    // Preserve raw ISO values for logic
                     startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
                     endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
                     Dismissible: this.calculateDismissible(record, now),
@@ -84,15 +84,48 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                     appBadges
                 };
             });
-        if (this.scheduledMaintenances.length > 0) {
-            this.activeSectionName = this.scheduledMaintenances[0].Id;
+
+        // Split into in progress and upcoming
+        const inProgress = [];
+        const upcoming = [];
+        allRecords.forEach(record => {
+            const startDate = this.parseUTCDate(record.Start_Date_Time__c);
+            const endDate = this.parseUTCDate(record.End_Date_Time__c);
+            if (now >= startDate && now <= endDate) {
+                inProgress.push(record);
+            } else if (now < startDate) {
+                upcoming.push(record);
+            }
+        });
+
+        // Sort inProgress: locking first, then by start date
+        inProgress.sort((a, b) => {
+            const aLock = a.Applicable_Apps__c && a.Applicable_Apps__c.includes('System') && !a.Dismissible__c ? 0 : 1;
+            const bLock = b.Applicable_Apps__c && b.Applicable_Apps__c.includes('System') && !b.Dismissible__c ? 0 : 1;
+            if (aLock !== bLock) return aLock - bLock;
+            return new Date(a.Start_Date_Time__c) - new Date(b.Start_Date_Time__c);
+        });
+        // Sort upcoming by start date
+        upcoming.sort((a, b) => new Date(a.Start_Date_Time__c) - new Date(b.Start_Date_Time__c));
+
+        this.inProgressMaintenances = inProgress;
+        this.upcomingMaintenances = upcoming;
+        this.scheduledMaintenances = allRecords;
+
+        // Set active section logic
+        if (inProgress.length > 0) {
+            this.activeSectionName = 'inProgress';
+        } else if (upcoming.length > 0) {
+            this.activeSectionName = 'upcoming';
+        } else {
+            this.activeSectionName = '';
         }
+
         // Check maintenance status
         data.some(record => {
             const startDate = this.parseUTCDate(record.Start_Date_Time__c);
             const endDate = this.parseUTCDate(record.End_Date_Time__c);
             const isCurrent = now >= startDate && now <= endDate;
-
             if (isCurrent) {
                 this.isInMaintenance = true;
                 if (record.Applicable_Apps__c.includes('System')) {
@@ -104,7 +137,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         });
         this.title = this.isInMaintenance ? 'Scheduled Maintenance Alert' : 'Scheduled Maintenance Reminder';
         this.updateDismissibleStatus();
-        this.isModalOpen = this.scheduledMaintenances.length > 0;
+        this.isModalOpen = allRecords.length > 0;
     }
 
     // Setup intervals for fetching data
