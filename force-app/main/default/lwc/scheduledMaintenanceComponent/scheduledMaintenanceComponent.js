@@ -1,22 +1,22 @@
-import { LightningElement, api, wire, track } from 'lwc';
+import { LightningElement, api } from 'lwc';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
 import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
-    @track scheduledMaintenances = [];
-    @track appId = null;
-    @track isModalOpen = false;
-    @track isDismissible = true;
-    @track isSystemMaintenance = false;
-    @track isInMaintenance = false;
-    @track isFullLock = false;
+    scheduledMaintenances = [];
+    appId = null;
+    isModalOpen = false;
+    isDismissible = true;
+    isSystemMaintenance = false;
+    isInMaintenance = false;
+    isFullLock = false;
     @api title = 'Scheduled Maintenance Alert';
     @api currentAppContext;
-    @track activeSectionName = '';
-    @track userTimeZone = null;
-    @track userLocale = null;
+    activeSectionName = '';
+    userTimeZone = null;
+    userLocale = null;
     intervalId = null;
 
     // Lifecycle hook that's called after the component is inserted into the DOM.
