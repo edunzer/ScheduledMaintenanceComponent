@@ -21,31 +21,61 @@
                     </template>
                 </header>
                 <div class="slds-modal__content slds-p-around_medium" style="overflow: auto;">
-                    <!-- Render accordion if isInMaintenance is true -->
+                    <!-- Enhanced: Render 'In Progress' and 'Upcoming' accordions if isInMaintenance is true -->
                     <template if:true={isInMaintenance}>
                         <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>
-                            <template for:each={scheduledMaintenances} for:item="maint">
-                                <lightning-accordion-section key={maint.Id} name={maint.Id} label={maint.Subject}>
-                                    <div class="slds-box slds-theme_default slds-var-m-bottom_small">
-                                        <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
-                                        <p><strong>Start:</strong> {maint.startDisplay}</p>
-                                        <p><strong>End:</strong> {maint.endDisplay}</p>
-                                        <template if:false={maint.Dismissible__c}>
-                                            <lightning-badge label={maint.BadgeLabel} class="slds-m-left_xx-small slds-m-top_x-small slds-m-top_x-small slds-theme_warning"></lightning-badge>
-                                        </template>
-                                        <template if:true={maint.appBadges}>
-                                            <div class="slds-m-top_x-small">
-                                                <div class="slds-box slds-theme_shade slds-p-around_small slds-m-bottom_xx-small">
-                                                    <div class="slds-text-title_caps slds-m-bottom_x-small">Applicable Apps</div>
-                                                    <div class="slds-grid slds-wrap slds-gutters_xx-small">
-                                                        <template for:each={maint.appBadges} for:item="app">
-                                                            <span key={app} class="slds-badge slds-badge_lightest">{app}</span>
-                                                        </template>
+                            <template if:true={inProgressMaintenances.length}>
+                                <lightning-accordion-section name="inProgress" label="In Progress">
+                                    <template for:each={inProgressMaintenances} for:item="maint">
+                                        <div key={maint.Id} class="slds-box slds-theme_default slds-var-m-bottom_small">
+                                            <h2 class="slds-text-heading_small slds-var-m-bottom_small"><strong>{maint.Subject}</strong></h2>
+                                            <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
+                                            <p><strong>Start:</strong> {maint.startDisplay}</p>
+                                            <p><strong>End:</strong> {maint.endDisplay}</p>
+                                            <template if:false={maint.Dismissible__c}>
+                                                <lightning-badge label={maint.BadgeLabel} class="slds-m-left_xx-small slds-m-top_x-small slds-theme_warning"></lightning-badge>
+                                            </template>
+                                            <template if:true={maint.appBadges}>
+                                                <div class="slds-m-top_x-small">
+                                                    <div class="slds-box slds-theme_shade slds-p-around_small slds-m-bottom_xx-small">
+                                                        <div class="slds-text-title_caps slds-m-bottom_x-small">Applicable Apps</div>
+                                                        <div class="slds-grid slds-wrap slds-gutters_xx-small">
+                                                            <template for:each={maint.appBadges} for:item="app">
+                                                                <span key={app} class="slds-badge slds-badge_lightest">{app}</span>
+                                                            </template>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </template>
-                                    </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </lightning-accordion-section>
+                            </template>
+                            <template if:true={upcomingMaintenances.length}>
+                                <lightning-accordion-section name="upcoming" label="Upcoming">
+                                    <template for:each={upcomingMaintenances} for:item="maint">
+                                        <div key={maint.Id} class="slds-box slds-theme_default slds-var-m-bottom_small">
+                                            <h2 class="slds-text-heading_small slds-var-m-bottom_small"><strong>{maint.Subject}</strong></h2>
+                                            <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
+                                            <p><strong>Start:</strong> {maint.startDisplay}</p>
+                                            <p><strong>End:</strong> {maint.endDisplay}</p>
+                                            <template if:false={maint.Dismissible__c}>
+                                                <lightning-badge label={maint.BadgeLabel} class="slds-m-left_xx-small slds-m-top_x-small slds-theme_warning"></lightning-badge>
+                                            </template>
+                                            <template if:true={maint.appBadges}>
+                                                <div class="slds-m-top_x-small">
+                                                    <div class="slds-box slds-theme_shade slds-p-around_small slds-m-bottom_xx-small">
+                                                        <div class="slds-text-title_caps slds-m-bottom_x-small">Applicable Apps</div>
+                                                        <div class="slds-grid slds-wrap slds-gutters_xx-small">
+                                                            <template for:each={maint.appBadges} for:item="app">
+                                                                <span key={app} class="slds-badge slds-badge_lightest">{app}</span>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
                                 </lightning-accordion-section>
                             </template>
                         </lightning-accordion>
