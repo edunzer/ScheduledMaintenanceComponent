@@ -28,7 +28,7 @@ The component enhances user experience by providing timely alerts and essential 
   - Alerts are shown based on the maintenance schedule and user interaction history.
 - **Dismissible Alerts**: Allows users to dismiss alerts, with the option to not allow dismiss during the maintenance time frame.
 - **Alert Frequency**: Only show alerts on a set frequency basis (every time, daily, weekly) thanks to browser cache data.
-- **Record Specific Cache**: Uses local storage to remember which alerts have been dismissed by the user.
+- **Record Specific Cache**: Uses local storage to independently track dismissals per maintenance record, ensuring each alert's frequency is evaluated separately.
 - **System and Application Maintenance**:
   - Differentiates between system-wide maintenance and application-specific maintenance.
   - Provides visual cues (e.g., badges) for alerts requiring system or app lock.
@@ -40,6 +40,14 @@ The component enhances user experience by providing timely alerts and essential 
 ![Dismissable Modal Popup Example](./img/Screenshot%202026-03-13%20150809.png)
 
 ## Changelog
+
+### v1.2.0
+
+- **Refactored Dismissal Storage**: The localStorage strategy now uses a single key, `scheduledMaintenance_dismissed`, storing an array of objects with the structure `{ recordId, dismissedAt }`. This replaces the previous approach and enables independent per-record dismissal tracking.
+- **Per-Record Dismissal Tracking**: Each maintenance record's dismissal is checked and stored independently, allowing multiple concurrent maintenance alerts to be handled correctly without affecting one another.
+- **Dismiss on Explicit User Action Only**: Dismissals are now only recorded when the user clicks the dismiss button, not when the modal is closed by other means.
+- **Removed Debug Console Logs**: Unnecessary `console.log` statements have been removed from production code for a cleaner, Salesforce Locker Service-compatible implementation.
+- **Improved Error Logging**: Error handling in `fetchAppId` and `navigateToApp` now uses `console.error` for clearer debugging, and localStorage parsing is wrapped in try/catch to gracefully handle malformed data.
 
 ### v1.1.0
 
@@ -54,7 +62,7 @@ The component enhances user experience by providing timely alerts and essential 
 
 ## Documentation
 
-For mor information please checkout the [Wiki](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki) for this repo. It incldes information like:
+For more information please checkout the [Wiki](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki) for this repo. It includes information like:
 - [A Component Overview](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki)
 - [Installation Guide](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/Installation)
 - [Details about the Object & Fields](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/Object-and-Fields)
