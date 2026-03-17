@@ -50,7 +50,6 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Fetches the scheduled maintenances from Apex
     fetchScheduledMaintenances() {
-        console.log('Fetching scheduled maintenances at', new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }));
         getActiveScheduledMaintenances({ appContext: this.currentAppContext })
             .then(data => {
                 const now = new Date();
@@ -176,10 +175,6 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             const endDate = this.parseUTCDate(record.End_Date_Time__c);
             return now < startDate || now > endDate || record.Dismissible__c;
         });
-        console.log('Is Dismissible: ' + this.isDismissible);
-        console.log('Is Full Lock: ' + this.isFullLock);
-        console.log('Is in Maintenance: ' + this.isInMaintenance);
-        console.log('Is System Maintenance: ' + this.isSystemMaintenance);
 
     }
 
