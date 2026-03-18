@@ -2,6 +2,7 @@ import { LightningElement, api } from 'lwc';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
 import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
+import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
@@ -21,23 +22,37 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     userTimeZone = null;
     userLocale = null;
     intervalId = null;
+    isAdmin = false;
+    profileName = '';
 
     // Lifecycle hook that's called after the component is inserted into the DOM.
     connectedCallback() {
         this.fetchAppId();
-        // Fetch user locale/timezone first, then fetch maintenances
-        getUserLocaleInfo()
-            .then(info => {
-                this.userTimeZone = info.timeZone;
-                this.userLocale = info.locale;
+        // Fetch user profile name first
+        getUserProfileName()
+            .then(profileName => {
+                this.profileName = profileName;
+                this.isAdmin = profileName === 'System Administrator';
             })
             .catch(() => {
-                this.userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                this.userLocale = navigator.language || 'en-US';
+                this.profileName = '';
+                this.isAdmin = false;
             })
             .finally(() => {
-                this.fetchScheduledMaintenances();
-                this.setupIntervals();
+                // Fetch user locale/timezone first, then fetch maintenances
+                getUserLocaleInfo()
+                    .then(info => {
+                        this.userTimeZone = info.timeZone;
+                        this.userLocale = info.locale;
+                    })
+                    .catch(() => {
+                        this.userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        this.userLocale = navigator.language || 'en-US';
+                    })
+                    .finally(() => {
+                        this.fetchScheduledMaintenances();
+                        this.setupIntervals();
+                    });
             });
     }
 
