@@ -34,6 +34,7 @@ The component enhances user experience by providing timely alerts and essential 
 - **Adaptive Titles**: Updates the title of the modal based on the current maintenance status.
 - **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
+- **Admin View**: System Administrators see a distinct read-only label instead of the maintenance modal, making it easy to identify the component while editing Lightning pages without triggering maintenance alerts.
 
 ## Examples
 - **Non Dismissable**
@@ -44,6 +45,13 @@ The component enhances user experience by providing timely alerts and essential 
   - ![Dismissable Modal Upcoming](./img/Screenshot%202026-03-17%20150702.png)
 
 ## Changelog
+
+### v1.3.0
+
+- **Admin View**: System Administrators now see a distinct read-only view displaying only the component name ("Scheduled Maintenance Component (Admin View)") instead of the full maintenance modal. This makes it easy for admins to identify and locate the component while editing Lightning pages, without being shown maintenance alerts.
+- **Profile-based Access Control**: The component now retrieves the running user's profile name at startup to determine whether to render the admin view or the standard maintenance modal. Users whose profile is `System Administrator` receive the admin view; all others see the normal modal behavior.
+- **New Apex Method – `getUserProfileName`**: A new cacheable Apex method has been added to `ScheduledMaintenanceService` that queries the running user's `Profile.Name`. This supports the profile-based rendering logic in the component.
+- **Initialization Order Update**: The `connectedCallback` lifecycle hook now fetches the user's profile name first, then resolves locale and timezone information, before initiating the maintenance data fetch and refresh intervals.
 
 ### v1.2.0
 
