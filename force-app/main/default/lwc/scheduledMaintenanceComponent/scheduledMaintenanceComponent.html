@@ -1,26 +1,34 @@
 <!-- sldsValidatorIgnore -->
 <template>
-    <template if:true={isModalOpen}>
-        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
-            <div class="slds-modal__container">
-                <header class="slds-modal__header">
-                    <template if:true={isDismissible}>
-                        <template if:false={isFullLock}>
-                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={dismissAllRecords}>
-                                <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
-                                <span class="slds-assistive-text">Close</span>
-                            </button>
-                        </template>                        
-                    </template>
-                    <h2 class="slds-text-heading_large">{title}</h2>
-                    <template if:false={isDismissible}>
-                        <div class="slds-m-top_large">
-                            <lightning-badge label="This App is Closed" class="slds-m-left_medium slds-badge slds-theme_warning"></lightning-badge>
-                        </div>
-                        <p class="slds-m-top_x-small">To see why this app is closed please review the below items.</p>
-                    </template>
-                </header>
-                <div class="slds-modal__content slds-p-around_medium" style="overflow: auto;">
+    <!-- Admin view: show only the component name, no modal -->
+    <template if:true={isAdmin}>
+        <div class="slds-box slds-theme_default slds-align_absolute-center" style="min-height: 60px; background: rgba(0,0,0,0.08);">
+            <span class="slds-text-title_caps" style="font-weight: bold;">Scheduled Maintenance Component (Admin View)</span>
+        </div>
+    </template>
+    <!-- Non-admin view: show modal as normal -->
+    <template if:false={isAdmin}>
+        <template if:true={isModalOpen}>
+            <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <template if:true={isDismissible}>
+                            <template if:false={isFullLock}>
+                                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={dismissAllRecords}>
+                                    <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                                    <span class="slds-assistive-text">Close</span>
+                                </button>
+                            </template>                        
+                        </template>
+                        <h2 class="slds-text-heading_large">{title}</h2>
+                        <template if:false={isDismissible}>
+                            <div class="slds-m-top_large">
+                                <lightning-badge label="This App is Closed" class="slds-m-left_medium slds-badge slds-theme_warning"></lightning-badge>
+                            </div>
+                            <p class="slds-m-top_x-small">To see why this app is closed please review the below items.</p>
+                        </template>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" style="overflow: auto;">
                     <!-- Enhanced: Render 'In Progress' and 'Upcoming' accordions if isInMaintenance is true -->
                     <template if:true={isInMaintenance}>
                         <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>

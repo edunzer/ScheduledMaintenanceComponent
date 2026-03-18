@@ -79,4 +79,10 @@ public with sharing class ScheduledMaintenanceService {
         result.put('locale', u.LocaleSidKey);
         return result;
     }
+    // Retrieves the running user's profile name
+    @AuraEnabled(cacheable=true)
+    public static String getUserProfileName() {
+        User u = [SELECT Profile.Name FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+        return u.Profile.Name;
+    }
 }
