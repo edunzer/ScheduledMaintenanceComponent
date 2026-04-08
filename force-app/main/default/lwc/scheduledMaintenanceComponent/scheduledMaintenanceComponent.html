@@ -37,7 +37,7 @@
                                     <template for:each={inProgressMaintenances} for:item="maint">
                                         <div key={maint.Id} class="slds-box slds-theme_default slds-var-m-bottom_small">
                                             <h2 class="slds-text-heading_small slds-var-m-bottom_small"><strong>{maint.Subject}</strong></h2>
-                                            <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
+                                            <p class="slds-p-bottom_small multi-line"><strong>Description:</strong> {maint.Description__c}</p>
                                             <p><strong>Start:</strong> {maint.startDisplay}</p>
                                             <p><strong>End:</strong> {maint.endDisplay}</p>
                                             <template if:false={maint.Dismissible__c}>
@@ -64,7 +64,7 @@
                                     <template for:each={upcomingMaintenances} for:item="maint">
                                         <div key={maint.Id} class="slds-box slds-theme_default slds-var-m-bottom_small">
                                             <h2 class="slds-text-heading_small slds-var-m-bottom_small"><strong>{maint.Subject}</strong></h2>
-                                            <p class="slds-p-bottom_small"><strong>Description:</strong> {maint.Description__c}</p>
+                                            <p class="slds-p-bottom_small multi-line"><strong>Description:</strong> {maint.Description__c}</p>
                                             <p><strong>Start:</strong> {maint.startDisplay}</p>
                                             <p><strong>End:</strong> {maint.endDisplay}</p>
                                             <template if:false={maint.Dismissible__c}>
