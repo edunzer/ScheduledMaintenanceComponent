@@ -20,12 +20,11 @@ public with sharing class ScheduledMaintenanceService {
         // Concatenate all filters into a single string formatted for a SOQL query's INCLUDES clause.
         String filterString = '\'' + String.join(escapedFilters, '\',\'') + '\'';
         System.debug('Using filter: ' + filterString);
-        // Format the current datetime for SOQL (ISO8601 format)
-        String nowStr = now.format('yyyy-MM-dd\'T\'HH:mm:ss\'Z\'');
-        // Construct the SOQL query string with the datetime injected directly
+        // Construct the SOQL query string. The current datetime is passed as a bind variable (:now) so it is
+        // compared as an absolute instant; formatting it into the string would shift it by the user's UTC offset.
         String queryString = 'SELECT Id, Name, Start_Date_Time__c, End_Date_Time__c, Subject__c, Description__c, Alert_Frequency__c, Start_Date_with_Buffer__c, Dismissible__c, Applicable_Apps__c ' +
                      'FROM Scheduled_Maintenance__c ' +
-                     'WHERE Start_Date_with_Buffer__c <= ' + nowStr + ' AND End_Date_Time__c >= ' + nowStr + ' AND Status__c = \'Scheduled\' ' +
+                     'WHERE Start_Date_with_Buffer__c <= :now AND End_Date_Time__c >= :now AND Status__c = \'Scheduled\' ' +
                      'AND Applicable_Apps__c INCLUDES (' + filterString + ')' + 
                      'ORDER BY Start_Date_Time__c ASC'; // Orders the results by the start date.
 
