@@ -89,12 +89,15 @@ The `Scheduled Maintenance Settings` hierarchy custom setting has a `Maintenance
 3. When the maintenance starts, go to **Setup > Custom Settings > Scheduled Maintenance Settings > Manage** and check `Maintenance Mode` in the organization default, or for specific profiles or users. Uncheck it when the maintenance ends. A scheduled flow can do this for you.
 
 ## Examples
-- **Non Dismissable**
-  - ![NonDismissable Modal Inprogress And Upcoming](./img/Screenshot%202026-03-17%20150537.png)
-- **Dismissable with Inprogress and Upcoming**
-  - ![Dismissable Modal Inprogress And Upcoming](./img/Screenshot%202026-03-17%20150601.png)
-- **Dismissiable with Upcoming**
-  - ![Dismissable Modal Upcoming](./img/Screenshot%202026-03-17%20150702.png)
+- **App lock**: a maintenance that can't be dismissed is in progress for this page's app. The header says what's locked and until when, and the button goes to the exit app.
+  - ![App lock with in-progress and upcoming maintenances](./img/redesign-app-lock.png)
+- **Reminder banner** (`Alert Style` set to `Banner`): upcoming maintenances that can be dismissed, shown in the component's place on the page.
+  - ![Reminder banner](./img/redesign-reminder-banner.png)
+- **Reminder dialog**: the details opened from the banner, or the default `Dialog` style.
+  - ![Reminder dialog](./img/redesign-reminder-dialog.png)
+- **Admin view**: admins and bypass users see a status line, with a preview of what users see.
+  - ![Admin status line](./img/redesign-admin-status.png)
+  - ![Admin preview of a lock](./img/redesign-admin-preview.png)
 
 ## Changelog
 
