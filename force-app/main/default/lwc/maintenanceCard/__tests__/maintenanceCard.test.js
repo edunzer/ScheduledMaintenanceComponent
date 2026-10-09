@@ -1,15 +1,15 @@
 import { createElement } from 'lwc';
 import MaintenanceCard from 'c/maintenanceCard';
 
+// A record as prepared by maintenanceUtils.toDisplayRecord
 const MAINTENANCE = {
     Id: 'a00000000000001AAA',
     Subject: 'CRM upgrade',
     Description__c: 'Line one\nLine two',
-    startDisplay: '10/09/26, 10:00 AM',
-    endDisplay: '10/09/26, 11:00 AM',
-    Dismissible__c: true,
-    BadgeLabel: '',
-    appBadges: ['CRM', 'PSA']
+    dateRange: 'Fri, Oct 9, 10:00 – 11:00 AM PDT',
+    affects: 'CRM, PSA',
+    lockLabel: '',
+    lockActive: false
 };
 
 describe('c-maintenance-card', () => {
@@ -26,26 +26,32 @@ describe('c-maintenance-card', () => {
         return element;
     }
 
-    it('shows the subject, description and times', () => {
+    it('shows the subject, date range, description and affected apps', () => {
         const element = render(MAINTENANCE);
+        const text = (selector) => element.shadowRoot.querySelector(selector).textContent.trim();
 
-        expect(element.shadowRoot.querySelector('h2').textContent).toBe('CRM upgrade');
-        const paragraphs = Array.from(element.shadowRoot.querySelectorAll('p')).map((p) => p.textContent);
-        expect(paragraphs).toEqual(['Description: Line one\nLine two', 'Start: 10/09/26, 10:00 AM', 'End: 10/09/26, 11:00 AM']);
-        expect(element.shadowRoot.querySelector('p').classList).toContain('multi-line');
+        expect(element.shadowRoot.querySelector('h3').textContent).toBe('CRM upgrade');
+        expect(text('.date-range')).toBe('Fri, Oct 9, 10:00 – 11:00 AM PDT');
+        expect(text('.multi-line')).toBe('Line one\nLine two');
+        expect(text('.affects')).toBe('Affects: CRM, PSA');
     });
 
-    it('lists the applicable apps', () => {
-        const element = render(MAINTENANCE);
+    it('leaves out a blank description', () => {
+        const element = render({ ...MAINTENANCE, Description__c: undefined });
 
-        const apps = Array.from(element.shadowRoot.querySelectorAll('.slds-badge_lightest')).map((span) => span.textContent);
-        expect(apps).toEqual(['CRM', 'PSA']);
+        expect(element.shadowRoot.querySelector('.multi-line')).toBeNull();
     });
 
-    it('shows the lock badge only for a maintenance that cannot be dismissed', () => {
+    it('shows a lock badge only for a maintenance that cannot be dismissed, highlighted while it locks', () => {
         expect(render(MAINTENANCE).shadowRoot.querySelector('lightning-badge')).toBeNull();
 
-        const locked = render({ ...MAINTENANCE, Dismissible__c: false, BadgeLabel: 'Requires App Lock' });
-        expect(locked.shadowRoot.querySelector('lightning-badge').label).toBe('Requires App Lock');
+        const locking = render({ ...MAINTENANCE, lockLabel: 'Locks CRM, PSA', lockActive: true }).shadowRoot.querySelector('lightning-badge');
+        expect(locking.label).toBe('Locks CRM, PSA');
+        expect(locking.iconName).toBe('utility:lock');
+        expect(locking.classList).toContain('slds-theme_warning');
+
+        const upcoming = render({ ...MAINTENANCE, lockLabel: 'Will lock CRM, PSA' }).shadowRoot.querySelector('lightning-badge');
+        expect(upcoming.label).toBe('Will lock CRM, PSA');
+        expect(upcoming.classList).not.toContain('slds-theme_warning');
     });
 });

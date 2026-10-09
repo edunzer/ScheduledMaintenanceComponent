@@ -1,11 +1,11 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
 const hoursFromNow = (hours) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
@@ -27,7 +27,7 @@ describe('c-scheduled-maintenance-component keyboard and screen reader support',
     beforeEach(() => {
         localStorage.clear();
         getUserProfileName.mockResolvedValue('Standard User');
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -45,7 +45,7 @@ describe('c-scheduled-maintenance-component keyboard and screen reader support',
         return element;
     }
 
-    const getDialog = (element) => element.shadowRoot.querySelector('section[role="dialog"]');
+    const getDialog = (element) => element.shadowRoot.querySelector('section.slds-modal');
     const pressEscape = (element) =>
         getDialog(element).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
 
@@ -53,7 +53,7 @@ describe('c-scheduled-maintenance-component keyboard and screen reader support',
         const element = await render(true);
         const dialog = getDialog(element);
 
-        expect(dialog.getAttribute('aria-labelledby')).toBe(element.shadowRoot.querySelector('header h2').id);
+        expect(dialog.getAttribute('aria-labelledby')).toBe(element.shadowRoot.querySelector('header h1').id);
         expect(dialog.getAttribute('aria-describedby')).toBe(element.shadowRoot.querySelector('.slds-modal__content').id);
     });
 

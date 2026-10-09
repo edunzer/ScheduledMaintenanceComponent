@@ -1,12 +1,12 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 // Users get the shared stub for the bypass permission (false).
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
 // An in-progress, non-dismissible System maintenance: a full lock.
@@ -27,7 +27,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 describe('c-scheduled-maintenance-component admin view', () => {
     beforeEach(() => {
         localStorage.clear();
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
         getActiveScheduledMaintenances.mockResolvedValue([SYSTEM_LOCK]);
     });
 
@@ -43,8 +43,8 @@ describe('c-scheduled-maintenance-component admin view', () => {
         document.body.appendChild(element);
         await flushPromises();
         return {
-            adminView: element.shadowRoot.textContent.includes('(Admin View)'),
-            modal: element.shadowRoot.querySelector('section[role="dialog"]') !== null
+            adminView: element.shadowRoot.querySelector('.admin-status') !== null,
+            modal: element.shadowRoot.querySelector('section.slds-modal') !== null
         };
     }
 

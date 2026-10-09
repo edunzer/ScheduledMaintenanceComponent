@@ -1,6 +1,6 @@
 import { LightningElement, api } from 'lwc';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import locale from '@salesforce/i18n/locale';
 import timeZone from '@salesforce/i18n/timeZone';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
@@ -12,6 +12,7 @@ import {
     canDismiss,
     hasFullLock,
     isAlertWindowOpen,
+    lockSummary,
     msUntilNextBoundary,
     parseUTCDate,
     pruneDismissals,
@@ -30,6 +31,9 @@ const DISMISSAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
     scheduledMaintenances = [];
     appId = null;
+    appLabel = '';
+    // What's locked and until when, shown in the header of a lock
+    lockSummary = '';
     isModalOpen = false;
     isDismissible = true;
     // IDs of records dismissed during this page visit; used for the 'Every Visit' frequency.
@@ -41,7 +45,12 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     @api reminderTitle = 'Scheduled Maintenance Reminder';
     @api currentAppContext;
     @api exitAppDeveloperName = 'Welcome';
-    activeSectionName = '';
+    // 'Dialog' or 'Banner': how alerts that can be dismissed are shown. Locks always use the dialog.
+    @api alertStyle = 'Dialog';
+    // Whether the user opened the dialog from the banner's "View details" link
+    detailsOpen = false;
+    // Whether an admin is previewing the dialog users see
+    previewOpen = false;
     // The user's Salesforce time zone and locale, available without an Apex call
     userTimeZone = timeZone;
     userLocale = locale;
@@ -85,7 +94,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Moves focus into the dialog when it opens, so keyboard and screen reader users start inside it.
     renderedCallback() {
-        const dialog = this.template.querySelector('section[role="dialog"]');
+        const dialog = this.template.querySelector('section.slds-modal');
         if (!dialog) {
             this.dialogFocused = false;
         } else if (!this.dialogFocused) {
@@ -96,21 +105,21 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Escape closes the dialog, but only when the alert can be dismissed.
     handleDialogKeyDown(event) {
-        if (event.key === 'Escape' && this.isDismissible) {
+        if (event.key === 'Escape' && this.showCloseButton) {
             event.stopPropagation();
-            this.dismissAllRecords();
+            this.handleClose();
         }
     }
 
     // Shift+Tab from the top of the dialog wraps to its last control: the footer button, if there is one.
     handleFocusStartGuard() {
         const footerButton = this.template.querySelector('footer lightning-button');
-        (footerButton || this.template.querySelector('section[role="dialog"]')).focus();
+        (footerButton || this.template.querySelector('section.slds-modal')).focus();
     }
 
     // Tab past the last control wraps to the top of the dialog.
     handleFocusEndGuard() {
-        this.template.querySelector('section[role="dialog"]').focus();
+        this.template.querySelector('section.slds-modal').focus();
     }
 
     // Fetches the scheduled maintenances from Apex
@@ -139,23 +148,14 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             // Records fetched ahead of their alert window are shown once it starts
             .filter(record => isAlertWindowOpen(record, now))
             .filter(record => shouldShowAlert(record, now, { dismissals, dismissedThisVisit: this.dismissedThisVisit, timeZone: userTimeZone }))
-            .map(record => toDisplayRecord(record, userLocale, userTimeZone));
+            .map(record => toDisplayRecord(record, now, userLocale, userTimeZone));
         const { inProgress, upcoming } = splitByStatus(allRecords, now);
 
         this.inProgressMaintenances = inProgress;
         this.upcomingMaintenances = upcoming;
         this.scheduledMaintenances = allRecords;
-
-        // Set active section logic
-        if (inProgress.length > 0) {
-            this.activeSectionName = 'inProgress';
-        } else if (upcoming.length > 0) {
-            this.activeSectionName = 'upcoming';
-        } else {
-            this.activeSectionName = '';
-        }
-
         this.isFullLock = hasFullLock(allRecords, now);
+        this.lockSummary = lockSummary(allRecords, now, { appContext: this.currentAppContext, locale: userLocale, timeZone: userTimeZone });
         this.isDismissible = canDismiss(allRecords, now);
         this.isModalOpen = allRecords.length > 0;
     }
@@ -163,6 +163,78 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     // Whether any shown maintenance is in progress; recalculated whenever the records are re-evaluated.
     get isInMaintenance() {
         return this.inProgressMaintenances.length > 0;
+    }
+
+    // With the Banner style, dismissible alerts show as a banner until the user opens the details.
+    // Admins see a status line instead, and the dialog only when they preview it.
+    get showBanner() {
+        return !this.isAdmin && this.isModalOpen && this.isDismissible && this.alertStyle === 'Banner' && !this.detailsOpen;
+    }
+    get showDialog() {
+        return this.isAdmin ? this.previewOpen : this.isModalOpen && !this.showBanner;
+    }
+
+    // The admin status line, e.g. "Scheduled maintenance: CRM is unavailable until Wed, Mar 18, 4:00 PM PDT."
+    get adminStatus() {
+        if (this.lockSummary) {
+            return `Scheduled maintenance: ${this.lockSummary}`;
+        }
+        const count = this.scheduledMaintenances.length;
+        if (count === 0) {
+            return 'Scheduled maintenance: nothing to show right now.';
+        }
+        return `Scheduled maintenance: ${count === 1 ? '1 alert is' : `${count} alerts are`} shown to users.`;
+    }
+    get canPreview() {
+        return this.scheduledMaintenances.length > 0;
+    }
+    openPreview() {
+        this.previewOpen = true;
+    }
+    closePreview() {
+        this.previewOpen = false;
+    }
+    // A preview can always be closed; for users, only alerts that can be dismissed can
+    get showCloseButton() {
+        return this.previewOpen || this.isDismissible;
+    }
+    // Closing a preview doesn't record a dismissal
+    handleClose() {
+        if (this.previewOpen) {
+            this.closePreview();
+        } else {
+            this.dismissAllRecords();
+        }
+    }
+    // Warning colors while a maintenance is in progress, info colors for upcoming ones
+    get bannerClass() {
+        return this.isInMaintenance ? 'slds-notify slds-notify_alert slds-alert_warning' : 'slds-notify slds-notify_alert';
+    }
+    get bannerIcon() {
+        return this.isInMaintenance ? 'utility:warning' : 'utility:info';
+    }
+    // White icons on the dark info background, dark ones on the light warning background
+    get bannerIconVariant() {
+        return this.isInMaintenance ? '' : 'inverse';
+    }
+    get bannerCloseClass() {
+        return this.isInMaintenance ? 'slds-button slds-button_icon slds-button_icon-small' : 'slds-button slds-button_icon slds-button_icon-small slds-button_icon-inverse';
+    }
+    // "Scheduled Maintenance Reminder: CRM upgrade · Mon, Mar 16, 4:00 – 6:00 PM PDT", or a count for several
+    get bannerMessage() {
+        const records = this.scheduledMaintenances;
+        if (records.length === 1) {
+            return `${this.modalTitle}: ${records[0].Subject} · ${records[0].dateRange}`;
+        }
+        return `${this.modalTitle}: ${records.length} maintenances`;
+    }
+    openDetails() {
+        this.detailsOpen = true;
+    }
+
+    // "Happening now" / "Coming up" headings are only needed when there are both.
+    get showSectionHeadings() {
+        return this.inProgressMaintenances.length > 0 && this.upcomingMaintenances.length > 0;
     }
 
     // The configured alert title while a maintenance is in progress, otherwise the reminder title.
@@ -222,15 +294,16 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         if (!this.exitAppDeveloperName) {
             return;
         }
-        getAppIdByDeveloperName({ developerName: this.exitAppDeveloperName })
-            .then(appId => {
-                if (!appId) {
+        getAppByDeveloperName({ developerName: this.exitAppDeveloperName })
+            .then(app => {
+                if (!app) {
                     return null;
                 }
-                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: appId } }).then(url => (url ? appId : null));
+                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: app.durableId } }).then(url => (url ? app : null));
             })
-            .then(appId => {
-                this.appId = appId;
+            .then(app => {
+                this.appId = app ? app.durableId : null;
+                this.appLabel = app ? app.label : '';
             })
             .catch(error => {
                 console.error('Error fetching App ID:', error);
@@ -245,7 +318,18 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         return !this.isDismissible;
     }
     get exitButtonLabel() {
-        return `Navigate to ${this.exitAppDeveloperName} App`;
+        return `Go to ${this.appLabel}`;
+    }
+    // Locks use the SLDS prompt pattern: an alert dialog with a warning-themed header.
+    get dialogRole() {
+        return this.isAppClosed ? 'alertdialog' : 'dialog';
+    }
+    get headerClass() {
+        return this.isAppClosed ? 'slds-modal__header slds-theme_warning slds-theme_alert-texture' : 'slds-modal__header';
+    }
+    // A full lock has no buttons, so the footer is left out.
+    get hasFooterButtons() {
+        return this.previewOpen || this.isDismissible || this.showExitButton;
     }
     // Navigates to another app based on the fetched app ID.
     navigateToApp() {
@@ -267,6 +351,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         recordIds.forEach(recordId => this.dismissedThisVisit.add(recordId));
         this.saveDismissals(addDismissals(this.loadDismissals(), recordIds, new Date()));
         this.isModalOpen = false;
+        this.detailsOpen = false;
     }
 
     // Loads this user's dismissals ({ recordId, dismissedAt }) from localStorage.

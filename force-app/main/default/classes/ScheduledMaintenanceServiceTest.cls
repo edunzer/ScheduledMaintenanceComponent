@@ -445,20 +445,19 @@ public class ScheduledMaintenanceServiceTest {
     }
 
     @IsTest
-    static void testGetAppIdByDeveloperName() {
+    static void testGetAppByDeveloperName() {
         // Look up an app that exists in this org rather than assuming a specific one (like 'Welcome') is installed
-        AppDefinition app = [SELECT DeveloperName FROM AppDefinition LIMIT 1];
+        AppDefinition expected = [SELECT DeveloperName, DurableId, Label FROM AppDefinition LIMIT 1];
 
         Test.startTest();
-
-        String appId = ScheduledMaintenanceService.getAppIdByDeveloperName(app.DeveloperName);
-        System.assertNotEquals(null, appId, 'App ID should not be null for valid developer name');
-        System.assertEquals(app.DeveloperName, [SELECT DeveloperName FROM AppDefinition WHERE DurableId = :appId].DeveloperName, 'App ID should belong to the requested app');
-
-        appId = ScheduledMaintenanceService.getAppIdByDeveloperName('NonExistentApp');
-        System.assertEquals(null, appId, 'App ID should be null for non-existent developer name');
-
+        ScheduledMaintenanceService.ExitApp app = ScheduledMaintenanceService.getAppByDeveloperName(expected.DeveloperName);
+        ScheduledMaintenanceService.ExitApp missing = ScheduledMaintenanceService.getAppByDeveloperName('NonExistentApp');
         Test.stopTest();
+
+        Assert.isNotNull(app, 'An app should be returned for a valid developer name');
+        Assert.areEqual(expected.DeveloperName, [SELECT DeveloperName FROM AppDefinition WHERE DurableId = :app.durableId].DeveloperName, 'The ID should belong to the requested app');
+        Assert.areEqual([SELECT Label FROM AppDefinition WHERE DurableId = :app.durableId].Label, app.label, 'The app label should be returned for the button');
+        Assert.isNull(missing, 'No app should be returned for a non-existent developer name');
     }
 
     @IsTest

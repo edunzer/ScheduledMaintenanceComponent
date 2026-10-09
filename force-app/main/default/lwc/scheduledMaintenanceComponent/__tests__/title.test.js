@@ -1,12 +1,12 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
@@ -32,7 +32,7 @@ describe('c-scheduled-maintenance-component title', () => {
         localStorage.clear();
         getUserProfileName.mockResolvedValue('Standard User');
         getUserLocaleInfo.mockResolvedValue({ timeZone: 'America/Los_Angeles', locale: 'en_US' });
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -48,7 +48,7 @@ describe('c-scheduled-maintenance-component title', () => {
         Object.assign(element, props);
         document.body.appendChild(element);
         await flushPromises();
-        return element.shadowRoot.querySelector('header h2').textContent;
+        return element.shadowRoot.querySelector('header h1').textContent;
     }
 
     it('uses the default alert title while a maintenance is in progress', async () => {

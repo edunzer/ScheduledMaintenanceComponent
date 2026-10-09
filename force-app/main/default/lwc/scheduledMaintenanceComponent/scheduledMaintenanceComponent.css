@@ -1,12 +1,16 @@
-.admin-view {
-    min-height: 60px;
-    background: rgba(0, 0, 0, 0.08);
-}
-
-.admin-view__label {
-    font-weight: bold;
-}
-
 .modal-content {
     overflow: auto;
+}
+
+.lock-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* The banner's link takes the banner's text color, like SLDS alert links */
+.banner-link {
+    color: inherit;
+    text-decoration: underline;
+    vertical-align: baseline;
 }

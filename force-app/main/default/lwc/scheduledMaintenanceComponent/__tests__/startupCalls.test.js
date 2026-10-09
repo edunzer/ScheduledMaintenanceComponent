@@ -1,13 +1,13 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 // sfdx-lwc-jest resolves @salesforce/i18n/timeZone to America/Los_Angeles and locale to en-US.
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
@@ -32,7 +32,7 @@ describe('c-scheduled-maintenance-component startup', () => {
         getUserProfileName.mockResolvedValue('Standard User');
         // Not used anymore; a different time zone here shows the component no longer relies on it
         getUserLocaleInfo.mockResolvedValue({ timeZone: 'Australia/Brisbane', locale: 'en_AU' });
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
         getActiveScheduledMaintenances.mockResolvedValue([
             {
                 Id: 'a00000000000001AAA',
@@ -68,8 +68,8 @@ describe('c-scheduled-maintenance-component startup', () => {
     });
 
     it("formats dates in the user's Salesforce time zone", () => {
-        const start = cardParagraphs(element).find((p) => p.textContent.startsWith('Start:'));
-        // 17:00 UTC is 10:00am in America/Los_Angeles
-        expect(start.textContent).toMatch(/10\/09\/26, 10:00\sAM/);
+        const dateRange = cardParagraphs(element).find((p) => p.classList.contains('date-range'));
+        // 17:00 to 18:00 UTC is 10:00 to 11:00am in America/Los_Angeles
+        expect(dateRange.textContent).toMatch(/^Fri, Oct 9, 10:00\s–\s11:00\sAM PDT$/);
     });
 });

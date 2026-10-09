@@ -1,67 +1,90 @@
 <!-- sldsValidatorIgnore -->
 <template>
-    <!-- Admin view: show only the component name, no modal -->
+    <!-- Admins and bypass users: a status line instead of the alerts, with a preview of what users see -->
     <template lwc:if={isAdmin}>
-        <div class="slds-box slds-theme_default slds-align_absolute-center admin-view">
-            <span class="slds-text-title_caps admin-view__label">Scheduled Maintenance Component (Admin View)</span>
+        <div class="slds-scoped-notification slds-scoped-notification_light admin-status" role="status">
+            <div class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="utility:info" size="x-small" alternative-text="Scheduled maintenance"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <p>
+                        {adminStatus}
+                        <span class="slds-text-color_weak"> You're exempt from maintenance locks.</span>
+                        <template lwc:if={canPreview}>
+                            <button class="slds-button slds-m-left_x-small" onclick={openPreview}>Preview</button>
+                        </template>
+                    </p>
+                </div>
+            </div>
         </div>
     </template>
-    <!-- Non-admin view: show modal as normal -->
-    <template lwc:elseif={isModalOpen}>
+    <!-- Banner style: a dismissible alert shown in the component's place on the page -->
+    <template lwc:if={showBanner}>
+        <div class={bannerClass} role="status">
+            <lightning-icon icon-name={bannerIcon} size="x-small" variant={bannerIconVariant} alternative-text="Scheduled maintenance" class="slds-m-right_x-small"></lightning-icon>
+            <h2>
+                {bannerMessage}
+                <button class="slds-button slds-m-left_x-small banner-link" onclick={openDetails}>View details</button>
+            </h2>
+            <div class="slds-notify__close">
+                <button class={bannerCloseClass} title="Dismiss" onclick={dismissAllRecords}>
+                    <lightning-icon icon-name="utility:close" size="x-small" variant={bannerIconVariant} alternative-text="Dismiss"></lightning-icon>
+                </button>
+            </div>
+        </div>
+    </template>
+    <!-- Dialog: locks, dismissible alerts unless they use the banner, and admin previews -->
+    <template lwc:elseif={showDialog}>
         <!-- Focus guards keep Tab and Shift+Tab inside the dialog -->
         <div tabindex="0" aria-hidden="true" onfocus={handleFocusStartGuard}></div>
-        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading" aria-describedby="modal-content" class="slds-modal slds-fade-in-open" onkeydown={handleDialogKeyDown}>
+        <section role={dialogRole} tabindex="-1" aria-modal="true" aria-labelledby="modal-heading" aria-describedby="modal-content" class="slds-modal slds-fade-in-open" onkeydown={handleDialogKeyDown}>
             <div class="slds-modal__container">
-                <header class="slds-modal__header">
-                    <template lwc:if={isDismissible}>
-                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={dismissAllRecords}>
+                <header class={headerClass}>
+                    <template lwc:if={showCloseButton}>
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleClose}>
                             <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
                             <span class="slds-assistive-text">Close</span>
                         </button>
                     </template>
-                    <h2 id="modal-heading" class="slds-text-heading_large">{modalTitle}</h2>
+                    <h1 id="modal-heading" class="slds-modal__title slds-hyphenate">{modalTitle}</h1>
                     <template lwc:if={isAppClosed}>
-                        <div class="slds-m-top_large">
-                            <lightning-badge label="This App is Closed" class="slds-m-left_medium slds-badge slds-theme_warning"></lightning-badge>
-                        </div>
-                        <p class="slds-m-top_x-small">To see why this app is closed please review the below items.</p>
+                        <p class="slds-m-top_x-small lock-summary">
+                            <lightning-icon icon-name="utility:lock" size="x-small" alternative-text="Locked" class="slds-m-right_x-small"></lightning-icon>
+                            <strong>{lockSummary}</strong>
+                        </p>
+                        <p class="slds-m-top_xx-small">This page unlocks automatically when the maintenance ends.</p>
                     </template>
                 </header>
                 <div id="modal-content" class="slds-modal__content slds-p-around_medium modal-content">
-                    <!-- While a maintenance is in progress: 'In Progress' and 'Upcoming' accordion sections -->
-                    <template lwc:if={isInMaintenance}>
-                        <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>
-                            <template lwc:if={inProgressMaintenances.length}>
-                                <lightning-accordion-section name="inProgress" label="In Progress">
-                                    <template for:each={inProgressMaintenances} for:item="maint">
-                                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
-                                    </template>
-                                </lightning-accordion-section>
-                            </template>
-                            <template lwc:if={upcomingMaintenances.length}>
-                                <lightning-accordion-section name="upcoming" label="Upcoming">
-                                    <template for:each={upcomingMaintenances} for:item="maint">
-                                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
-                                    </template>
-                                </lightning-accordion-section>
-                            </template>
-                        </lightning-accordion>
+                    <!-- In-progress maintenances first, then upcoming ones; headings only when there are both -->
+                    <template lwc:if={showSectionHeadings}>
+                        <h2 class="slds-text-title_caps slds-m-bottom_x-small">Happening now</h2>
                     </template>
-                    <!-- Otherwise a list of reminders -->
-                    <template lwc:else>
-                        <template for:each={scheduledMaintenances} for:item="maint">
-                            <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
-                        </template>
+                    <template for:each={inProgressMaintenances} for:item="maint">
+                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
+                    </template>
+                    <template lwc:if={showSectionHeadings}>
+                        <h2 class="slds-text-title_caps slds-m-top_medium slds-m-bottom_x-small">Coming up</h2>
+                    </template>
+                    <template for:each={upcomingMaintenances} for:item="maint">
+                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
                     </template>
                 </div>
-                <footer class="slds-modal__footer">
-                    <template lwc:if={isDismissible}>
-                        <lightning-button variant="neutral" label="Dismiss" title="Dismiss" onclick={dismissAllRecords}></lightning-button>
-                    </template>
-                    <template lwc:elseif={showExitButton}>
-                        <lightning-button variant="neutral" label={exitButtonLabel} title={exitButtonLabel} onclick={navigateToApp}></lightning-button>
-                    </template>
-                </footer>
+                <template lwc:if={hasFooterButtons}>
+                    <footer class="slds-modal__footer">
+                        <template lwc:if={previewOpen}>
+                            <span class="slds-float_left slds-text-color_weak slds-p-top_xx-small">Preview of what users see</span>
+                            <lightning-button variant="neutral" label="Close preview" title="Close preview" onclick={closePreview}></lightning-button>
+                        </template>
+                        <template lwc:elseif={isDismissible}>
+                            <lightning-button variant="neutral" label="Dismiss" title="Dismiss" onclick={dismissAllRecords}></lightning-button>
+                        </template>
+                        <template lwc:elseif={showExitButton}>
+                            <lightning-button variant="brand" label={exitButtonLabel} title={exitButtonLabel} onclick={navigateToApp}></lightning-button>
+                        </template>
+                    </footer>
+                </template>
             </div>
         </section>
         <div tabindex="0" aria-hidden="true" onfocus={handleFocusEndGuard}></div>

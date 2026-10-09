@@ -24,7 +24,7 @@ The component enhances user experience by providing timely alerts and essential 
   - Refreshes again when the user returns to the tab.
   - Between refreshes, alerts and locks still start and end on time: maintenances starting within the next 35 minutes are loaded ahead, and the component re-checks at each alert, start and end time.
 - **Maintenance Alerts**:
-  - Displays a modal dialog with maintenance alerts.
+  - Displays maintenance alerts in a dialog. With the `Alert Style` property set to `Banner`, alerts that can be dismissed show as a banner in the component's place on the page instead, with a link to the details. Locks always use the dialog.
   - Alerts are shown based on the maintenance schedule and user interaction history.
 - **Dismissible Alerts**: Allows users to dismiss alerts, with the option to not allow dismiss during the maintenance time frame.
 - **Alert Frequency**: Controls when a dismissed alert is shown again, using browser cache data:
@@ -39,7 +39,7 @@ The component enhances user experience by providing timely alerts and essential 
 - **Adaptive Titles**: Updates the title of the modal based on the current maintenance status.
 - **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
-- **Admin View**: Users with the `Bypass Scheduled Maintenance` custom permission, or the `System Administrator` profile, see a distinct read-only label instead of the maintenance modal and are never locked. This makes it easy to identify the component while editing Lightning pages. Assign the `Scheduled Maintenance Bypass` permission set to anyone else who should bypass the lock, such as admins on cloned profiles.
+- **Admin View**: Users with the `Bypass Scheduled Maintenance` custom permission, or the `System Administrator` profile, see a one-line status instead of the maintenance alerts (for example, which app is locked and until when) and are never locked. Its **Preview** button opens the dialog users see, without locking anything or recording a dismissal. The status line also makes the component easy to find while editing Lightning pages. Assign the `Scheduled Maintenance Bypass` permission set to anyone else who should bypass the lock, such as admins on cloned profiles.
 
 ## Permissions
 
@@ -89,12 +89,15 @@ The `Scheduled Maintenance Settings` hierarchy custom setting has a `Maintenance
 3. When the maintenance starts, go to **Setup > Custom Settings > Scheduled Maintenance Settings > Manage** and check `Maintenance Mode` in the organization default, or for specific profiles or users. Uncheck it when the maintenance ends. A scheduled flow can do this for you.
 
 ## Examples
-- **Non Dismissable**
-  - ![NonDismissable Modal Inprogress And Upcoming](./img/Screenshot%202026-03-17%20150537.png)
-- **Dismissable with Inprogress and Upcoming**
-  - ![Dismissable Modal Inprogress And Upcoming](./img/Screenshot%202026-03-17%20150601.png)
-- **Dismissiable with Upcoming**
-  - ![Dismissable Modal Upcoming](./img/Screenshot%202026-03-17%20150702.png)
+- **App lock**: a maintenance that can't be dismissed is in progress for this page's app. The header says what's locked and until when, and the button goes to the exit app.
+  - ![App lock with in-progress and upcoming maintenances](./img/redesign-app-lock.png)
+- **Reminder banner** (`Alert Style` set to `Banner`): upcoming maintenances that can be dismissed, shown in the component's place on the page.
+  - ![Reminder banner](./img/redesign-reminder-banner.png)
+- **Reminder dialog**: the details opened from the banner, or the default `Dialog` style.
+  - ![Reminder dialog](./img/redesign-reminder-dialog.png)
+- **Admin view**: admins and bypass users see a status line, with a preview of what users see.
+  - ![Admin status line](./img/redesign-admin-status.png)
+  - ![Admin preview of a lock](./img/redesign-admin-preview.png)
 
 ## Changelog
 

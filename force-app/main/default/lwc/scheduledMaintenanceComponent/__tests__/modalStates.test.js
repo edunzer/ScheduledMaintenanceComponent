@@ -1,11 +1,11 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
 const NOW = new Date('2026-10-09T17:00:00.000Z');
@@ -35,7 +35,7 @@ describe('c-scheduled-maintenance-component modal states', () => {
         jest.setSystemTime(NOW);
         localStorage.clear();
         getUserProfileName.mockResolvedValue('Standard User');
-        getAppIdByDeveloperName.mockResolvedValue('06m000000000001AAA');
+        getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
     });
 
     afterEach(() => {
@@ -57,8 +57,8 @@ describe('c-scheduled-maintenance-component modal states', () => {
 
     // What the user can see and do in the modal
     const describeModal = (element) => ({
-        open: element.shadowRoot.querySelector('section[role="dialog"]') !== null,
-        closed: Array.from(element.shadowRoot.querySelectorAll('header lightning-badge')).some((b) => b.label === 'This App is Closed'),
+        open: element.shadowRoot.querySelector('section.slds-modal') !== null,
+        closed: element.shadowRoot.querySelector('.lock-summary') !== null,
         closeIcon: element.shadowRoot.querySelector('header button[title="Close"]') !== null,
         buttons: Array.from(element.shadowRoot.querySelectorAll('footer lightning-button')).map((b) => b.label)
     });
@@ -72,7 +72,7 @@ describe('c-scheduled-maintenance-component modal states', () => {
     it('app lock: an app maintenance that cannot be dismissed offers the exit app', async () => {
         const element = await render([maintenance({ Dismissible__c: false, Applicable_Apps__c: 'CRM' })], 'CRM');
 
-        expect(describeModal(element)).toEqual({ open: true, closed: true, closeIcon: false, buttons: ['Navigate to Welcome App'] });
+        expect(describeModal(element)).toEqual({ open: true, closed: true, closeIcon: false, buttons: ['Go to Welcome'] });
     });
 
     it('dismissible reminder: can be closed, and the dismissal is saved', async () => {
@@ -86,6 +86,44 @@ describe('c-scheduled-maintenance-component modal states', () => {
         expect(JSON.parse(localStorage.getItem('scheduledMaintenance_dismissed_005000000000000000'))).toEqual([
             { recordId: 'a00000000000001AAA', dismissedAt: NOW.toISOString() }
         ]);
+    });
+
+    it('full lock: says all apps are unavailable and until when, in a warning alert dialog', async () => {
+        const element = await render([maintenance({ Dismissible__c: false })]);
+
+        expect(element.shadowRoot.querySelector('section.slds-modal').getAttribute('role')).toBe('alertdialog');
+        expect(element.shadowRoot.querySelector('header').classList).toContain('slds-theme_warning');
+        // Ends at 18:00 UTC, 11:00am in the user's time zone (America/Los_Angeles in Jest)
+        expect(element.shadowRoot.querySelector('.lock-summary strong').textContent).toMatch(/^All apps are unavailable until Fri, Oct 9, 11:00\sAM PDT\.$/);
+        expect(element.shadowRoot.querySelector('footer')).toBeNull();
+    });
+
+    it('app lock: names the locked app and makes the exit app the main button', async () => {
+        const element = await render([maintenance({ Dismissible__c: false, Applicable_Apps__c: 'CRM' })], 'CRM');
+
+        expect(element.shadowRoot.querySelector('.lock-summary strong').textContent).toMatch(/^CRM is unavailable until /);
+        expect(element.shadowRoot.querySelector('footer lightning-button').variant).toBe('brand');
+    });
+
+    it('reminder: uses a plain dialog without the lock summary', async () => {
+        const element = await render([maintenance({ Start_Date_Time__c: minutesFromNow(60), End_Date_Time__c: minutesFromNow(120) })]);
+
+        expect(element.shadowRoot.querySelector('section.slds-modal').getAttribute('role')).toBe('dialog');
+        expect(element.shadowRoot.querySelector('header').classList).not.toContain('slds-theme_warning');
+        expect(element.shadowRoot.querySelector('.lock-summary')).toBeNull();
+    });
+
+    it('groups maintenances under "Happening now" and "Coming up" only when there are both', async () => {
+        const headings = (element) => Array.from(element.shadowRoot.querySelectorAll('.slds-modal__content h2')).map((h) => h.textContent);
+        const inProgress = maintenance({ Id: 'a01' });
+        const upcoming = maintenance({ Id: 'a02', Start_Date_Time__c: minutesFromNow(60), End_Date_Time__c: minutesFromNow(120) });
+
+        const both = await render([inProgress, upcoming]);
+        expect(headings(both)).toEqual(['Happening now', 'Coming up']);
+        expect(both.shadowRoot.querySelectorAll('c-maintenance-card')).toHaveLength(2);
+        document.body.removeChild(both);
+
+        expect(headings(await render([upcoming]))).toEqual([]);
     });
 
     it('stays closed when there is nothing to show', async () => {

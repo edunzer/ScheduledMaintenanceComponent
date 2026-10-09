@@ -1,3 +1,8 @@
 .multi-line {
     white-space: pre-line;
 }
+
+/* Bold subjects make the cards easy to scan */
+.card-title {
+    font-weight: 700;
+}

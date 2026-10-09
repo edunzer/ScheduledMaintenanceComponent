@@ -1,7 +1,7 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
@@ -22,7 +22,7 @@ jest.mock('lightning/navigation', () => {
     return { NavigationMixin };
 });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
@@ -47,7 +47,7 @@ describe('c-scheduled-maintenance-component', () => {
         getUserProfileName.mockResolvedValue('Standard User');
         getUserLocaleInfo.mockResolvedValue({ timeZone: 'America/Los_Angeles', locale: 'en_US' });
         getActiveScheduledMaintenances.mockResolvedValue([]);
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -73,47 +73,47 @@ describe('c-scheduled-maintenance-component', () => {
         const getFooterButtons = (element) => element.shadowRoot.querySelectorAll('footer lightning-button');
 
         it('navigates to the Welcome app by default when it is found', async () => {
-            getAppIdByDeveloperName.mockResolvedValue('06m000000000001AAA');
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
 
             const element = await renderAppLock();
 
-            expect(getAppIdByDeveloperName).toHaveBeenCalledWith({ developerName: 'Welcome' });
+            expect(getAppByDeveloperName).toHaveBeenCalledWith({ developerName: 'Welcome' });
             expect(mockGenerateUrl).toHaveBeenCalledWith({ type: 'standard__app', attributes: { appTarget: '06m000000000001AAA' } });
             const buttons = getFooterButtons(element);
             expect(buttons).toHaveLength(1);
-            expect(buttons[0].label).toBe('Navigate to Welcome App');
+            expect(buttons[0].label).toBe('Go to Welcome');
         });
 
-        it('uses the configured exit app developer name', async () => {
-            getAppIdByDeveloperName.mockResolvedValue('06m000000000002AAA');
+        it('looks up the configured exit app and shows its label', async () => {
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000002AAA', label: 'Sales Console' });
 
             const element = await renderAppLock({ exitAppDeveloperName: 'Sales_Console' });
 
-            expect(getAppIdByDeveloperName).toHaveBeenCalledWith({ developerName: 'Sales_Console' });
-            expect(getFooterButtons(element)[0].label).toBe('Navigate to Sales_Console App');
+            expect(getAppByDeveloperName).toHaveBeenCalledWith({ developerName: 'Sales_Console' });
+            expect(getFooterButtons(element)[0].label).toBe('Go to Sales Console');
         });
 
         it('is hidden when the exit app is not found', async () => {
-            getAppIdByDeveloperName.mockResolvedValue(null);
+            getAppByDeveloperName.mockResolvedValue(null);
 
             const element = await renderAppLock();
 
-            expect(element.shadowRoot.querySelector('section[role="dialog"]')).not.toBeNull();
+            expect(element.shadowRoot.querySelector('section.slds-modal')).not.toBeNull();
             expect(getFooterButtons(element)).toHaveLength(0);
         });
 
         it('is hidden where the platform cannot navigate to apps, such as Experience Cloud sites', async () => {
-            getAppIdByDeveloperName.mockResolvedValue('06m000000000001AAA');
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
             mockGenerateUrl.mockResolvedValue(null);
 
             const element = await renderAppLock();
 
-            expect(element.shadowRoot.querySelector('section[role="dialog"]')).not.toBeNull();
+            expect(element.shadowRoot.querySelector('section.slds-modal')).not.toBeNull();
             expect(getFooterButtons(element)).toHaveLength(0);
         });
 
         it('is hidden if building the app URL fails', async () => {
-            getAppIdByDeveloperName.mockResolvedValue('06m000000000001AAA');
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
             mockGenerateUrl.mockRejectedValue(new Error('Unsupported page reference'));
             const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
