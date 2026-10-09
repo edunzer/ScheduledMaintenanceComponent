@@ -7,7 +7,7 @@ import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.get
 
 // Undefined outside Experience Cloud; set per test to simulate a site.
 let mockCommunityId;
-jest.mock('@salesforce/community/Id', () => ({ __esModule: true, get default() { return mockCommunityId; } }), { virtual: true });
+jest.mock('@salesforce/community/Id', () => ({ __esModule: true, get default() { return mockCommunityId; } }));
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo', () => ({ default: jest.fn() }), { virtual: true });
