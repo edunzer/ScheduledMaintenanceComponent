@@ -5,9 +5,22 @@ import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceServic
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
-// Undefined outside Experience Cloud; set per test to simulate a site.
-let mockCommunityId;
-jest.mock('@salesforce/community/Id', () => ({ __esModule: true, get default() { return mockCommunityId; } }));
+// The URL the platform builds for the exit app; null where app navigation isn't available (Experience Cloud).
+const mockGenerateUrl = jest.fn();
+jest.mock('lightning/navigation', () => {
+    const Navigate = Symbol('Navigate');
+    const GenerateUrl = Symbol('GenerateUrl');
+    const NavigationMixin = (Base) =>
+        class extends Base {
+            [Navigate]() {}
+            [GenerateUrl](pageReference) {
+                return mockGenerateUrl(pageReference);
+            }
+        };
+    NavigationMixin.Navigate = Navigate;
+    NavigationMixin.GenerateUrl = GenerateUrl;
+    return { NavigationMixin };
+});
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo', () => ({ default: jest.fn() }), { virtual: true });
@@ -30,7 +43,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('c-scheduled-maintenance-component', () => {
     beforeEach(() => {
-        mockCommunityId = undefined;
+        mockGenerateUrl.mockImplementation((pageReference) => Promise.resolve('/lightning/app/' + pageReference.attributes.appTarget));
         getUserProfileName.mockResolvedValue('Standard User');
         getUserLocaleInfo.mockResolvedValue({ timeZone: 'America/Los_Angeles', locale: 'en_US' });
         getActiveScheduledMaintenances.mockResolvedValue([]);
@@ -65,6 +78,7 @@ describe('c-scheduled-maintenance-component', () => {
             const element = await renderAppLock();
 
             expect(getAppIdByDeveloperName).toHaveBeenCalledWith({ developerName: 'Welcome' });
+            expect(mockGenerateUrl).toHaveBeenCalledWith({ type: 'standard__app', attributes: { appTarget: '06m000000000001AAA' } });
             const buttons = getFooterButtons(element);
             expect(buttons).toHaveLength(1);
             expect(buttons[0].label).toBe('Navigate to Welcome App');
@@ -88,15 +102,25 @@ describe('c-scheduled-maintenance-component', () => {
             expect(getFooterButtons(element)).toHaveLength(0);
         });
 
-        it('is hidden on Experience Cloud sites without looking up the app', async () => {
-            mockCommunityId = '0DB000000000001AAA';
+        it('is hidden where the platform cannot navigate to apps, such as Experience Cloud sites', async () => {
             getAppIdByDeveloperName.mockResolvedValue('06m000000000001AAA');
+            mockGenerateUrl.mockResolvedValue(null);
 
             const element = await renderAppLock();
 
-            expect(getAppIdByDeveloperName).not.toHaveBeenCalled();
             expect(element.shadowRoot.querySelector('section[role="dialog"]')).not.toBeNull();
             expect(getFooterButtons(element)).toHaveLength(0);
+        });
+
+        it('is hidden if building the app URL fails', async () => {
+            getAppIdByDeveloperName.mockResolvedValue('06m000000000001AAA');
+            mockGenerateUrl.mockRejectedValue(new Error('Unsupported page reference'));
+            const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+            const element = await renderAppLock();
+
+            expect(getFooterButtons(element)).toHaveLength(0);
+            consoleError.mockRestore();
         });
     });
 });

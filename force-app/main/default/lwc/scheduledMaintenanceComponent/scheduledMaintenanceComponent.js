@@ -4,7 +4,6 @@ import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceServic
 import locale from '@salesforce/i18n/locale';
 import timeZone from '@salesforce/i18n/timeZone';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
-import communityId from '@salesforce/community/Id';
 import hasBypassPermission from '@salesforce/customPermission/Bypass_Scheduled_Maintenance';
 import userId from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
@@ -216,14 +215,22 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         }, delay);
     }
 
-    // Fetches the app ID for navigation purposes. App navigation isn't available on Experience Cloud sites.
+    // Fetches the app ID for the exit button. The button is only shown if the platform can build a URL for the app,
+    // which it can't on Experience Cloud sites. (Importing @salesforce/community/Id to detect sites instead stops the
+    // component loading in Lightning Experience.)
     fetchAppId() {
-        if (communityId || !this.exitAppDeveloperName) {
+        if (!this.exitAppDeveloperName) {
             return;
         }
         getAppIdByDeveloperName({ developerName: this.exitAppDeveloperName })
-            .then(result => {
-                this.appId = result;
+            .then(appId => {
+                if (!appId) {
+                    return null;
+                }
+                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: appId } }).then(url => (url ? appId : null));
+            })
+            .then(appId => {
+                this.appId = appId;
             })
             .catch(error => {
                 console.error('Error fetching App ID:', error);
