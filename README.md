@@ -41,6 +41,26 @@ The component enhances user experience by providing timely alerts and essential 
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
 - **Admin View**: Users with the `Bypass Scheduled Maintenance` custom permission, or the `System Administrator` profile, see a one-line status instead of the maintenance alerts (for example, which app is locked and until when) and are never locked. Its **Preview** button opens the dialog users see, without locking anything or recording a dismissal. The status line also makes the component easy to find while editing Lightning pages. Assign the `Scheduled Maintenance Bypass` permission set to anyone else who should bypass the lock, such as admins on cloned profiles.
 
+## Installation
+
+Install the unmanaged package, version **2.0.0**:
+
+- Production or Developer Edition: https://login.salesforce.com/packaging/installPackage.apexp?p0=04tbm000000nTfBAAU
+- Sandbox: https://test.salesforce.com/packaging/installPackage.apexp?p0=04tbm000000nTfBAAU
+- Or with the Salesforce CLI: `sf package install --package 04tbm000000nTfBAAU --target-org <your org> --wait 20`
+
+Choose **Install for Admins Only**; access for everyone else comes from the permission sets.
+
+After installing:
+
+1. Assign the permission sets described under [Permissions](#permissions).
+2. Set the **Applicable Apps** values to the apps in your org: Setup > Object Manager > Scheduled Maintenance > Fields & Relationships > Applicable Apps. Keep `System`, which applies to every app.
+3. Add the component to the Lightning pages to cover in Lightning App Builder, and set its **Current App Context** (and optionally **Alert Style**, the titles and the **Exit App Developer Name**).
+4. Add the **Scheduled Maintenance** tab to an app for the people who create maintenance records.
+5. Optional: set up a server-side lock with **Maintenance Mode** (see [Limitations](#limitations)).
+
+> Unmanaged packages can't be upgraded: the installed components become ordinary metadata in your org, and installing a newer version over them fails because they already exist. To update an org, deploy the newer source from this repo instead (`sf project deploy start --source-dir force-app`). Uninstalling the package deletes the component, the object and all maintenance records.
+
 ## Permissions
 
 The component reads maintenance records with the user's own object and field permissions, so assign permission sets as follows:
@@ -99,11 +119,28 @@ The `Scheduled Maintenance Settings` hierarchy custom setting has a `Maintenance
   - ![Admin status line](./img/redesign-admin-status.png)
   - ![Admin preview of a lock](./img/redesign-admin-preview.png)
 
+## Releasing a new package version
+
+The unmanaged package, **Scheduled Maintenance Component** (`033bm000000y0jVAAQ`), lives in the packaging org. `manifest/unmanaged-package.xml` lists every component in it; its `<fullName>` adds deployed components to the package.
+
+1. Deploy the components into the packaging org. Converting the source drops the `<fullName>`, so copy the manifest back in as `package.xml` before deploying:
+   ```sh
+   sf project convert source --manifest manifest/unmanaged-package.xml --output-dir .package-build
+   cp manifest/unmanaged-package.xml .package-build/package.xml
+   sf project deploy start --metadata-dir .package-build --target-org <packaging org>
+   ```
+   If you add components to `force-app`, regenerate the manifest with `sf project generate manifest --source-dir force-app --name unmanaged-package --output-dir manifest` and add the `<fullName>Scheduled Maintenance Component</fullName>` line back.
+2. Upload a version. This runs the Apex tests in the packaging org and returns the new `04t` ID:
+   ```sh
+   sf package1 version create --package-id 033bm000000y0jVAAQ --name "<version>" --wait 30 --target-org <packaging org>
+   ```
+3. Install the version into a new org to check it, update the install links above, and publish a GitHub release with the release notes.
+
 ## Documentation
 
 For more information please checkout the [Wiki](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki) for this repo. It includes information like:
 - [A Component Overview](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki)
-- [Installation Guide](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/Installation)
+- [Installation](#installation) (the wiki's Installation page predates the package)
 - [Details about the Object & Fields](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/Object-and-Fields)
 - [Details about the LWC HTML](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/ScheduledMaintenanceComponent-HTML)
 - [Details about the LWC Javascript](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki/ScheduledMaintenanceComponent-JavaScript)
