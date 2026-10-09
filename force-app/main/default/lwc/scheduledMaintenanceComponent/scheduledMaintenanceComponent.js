@@ -11,6 +11,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     appId = null;
     isModalOpen = false;
     isDismissible = true;
+    // IDs of records dismissed during this page visit; used for the 'Every Visit' frequency.
+    dismissedThisVisit = new Set();
     isSystemMaintenance = false;
     isInMaintenance = false;
     isFullLock = false;
@@ -291,6 +293,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             dismissedArr = dismissedArr.filter(item => item.recordId !== record.Id);
             // Add new dismissal
             dismissedArr.push({ recordId: record.Id, dismissedAt: now });
+            this.dismissedThisVisit.add(record.Id);
         });
         localStorage.setItem('scheduledMaintenance_dismissed', JSON.stringify(dismissedArr));
         this.isModalOpen = false;
@@ -316,20 +319,34 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         if (dismissal) {
             lastDismissed = this.parseUTCDate(dismissal.dismissedAt);
         }
-        return !lastDismissed || this.frequencyAllowsAlert(record.Alert_Frequency__c, lastDismissed, currentDate);
+        return !lastDismissed || this.frequencyAllowsAlert(record.Alert_Frequency__c, lastDismissed, currentDate, record.Id);
     }
     // Determines if a maintenance alert should be repeated based on its frequency and the last dismissal date.
-    frequencyAllowsAlert(frequency, lastDismissed, currentDate) {
+    frequencyAllowsAlert(frequency, lastDismissed, currentDate, recordId) {
         switch (frequency) {
             case 'Every Visit':
-                return true;
+                // Once per page visit: stays closed during background refreshes until the page is loaded again
+                return !this.dismissedThisVisit.has(recordId);
             case 'Daily':
-                return !lastDismissed || lastDismissed.toISOString().slice(0, 10) !== currentDate.toISOString().slice(0, 10);
+                // Shows again on the next calendar day in the user's time zone
+                return !lastDismissed || this.toLocalDateKey(lastDismissed) !== this.toLocalDateKey(currentDate);
             case 'Weekly':
-                let oneWeekAgo = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate() - 7));
-                return !lastDismissed || lastDismissed < oneWeekAgo;
+                // Shows again 7 days after the dismissal
+                return !lastDismissed || currentDate - lastDismissed >= 7 * 24 * 60 * 60 * 1000;
             default:
                 return true;
+        }
+    }
+
+    // Formats a date as YYYY-MM-DD in the user's time zone, for comparing calendar days
+    toLocalDateKey(date) {
+        const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        try {
+            const timeZone = this.userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+            return new Intl.DateTimeFormat('en-CA', { ...dateOptions, timeZone }).format(date);
+        } catch (e) {
+            // Unrecognized time zone: fall back to the browser's
+            return new Intl.DateTimeFormat('en-CA', dateOptions).format(date);
         }
     }
 

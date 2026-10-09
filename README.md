@@ -25,7 +25,10 @@ The component enhances user experience by providing timely alerts and essential 
   - Displays a modal dialog with maintenance alerts.
   - Alerts are shown based on the maintenance schedule and user interaction history.
 - **Dismissible Alerts**: Allows users to dismiss alerts, with the option to not allow dismiss during the maintenance time frame.
-- **Alert Frequency**: Only show alerts on a set frequency basis (every time, daily, weekly) thanks to browser cache data.
+- **Alert Frequency**: Controls when a dismissed alert is shown again, using browser cache data:
+  - **Every Visit**: on the next page load. It stays closed during background refreshes.
+  - **Daily**: on the next calendar day in the user's Salesforce time zone.
+  - **Weekly**: 7 days after it was dismissed.
 - **Record Specific Cache**: Uses local storage to independently track dismissals per maintenance record, ensuring each alert's frequency is evaluated separately.
 - **System and Application Maintenance**:
   - Differentiates between system-wide maintenance and application-specific maintenance.
