@@ -18,6 +18,10 @@ const flushPromises = async () => {
     }
 };
 
+// Paragraphs inside the maintenance cards, which render in their own shadow roots.
+const cardParagraphs = (element) =>
+    Array.from(element.shadowRoot.querySelectorAll('c-maintenance-card')).flatMap((card) => Array.from(card.shadowRoot.querySelectorAll('p')));
+
 describe('c-scheduled-maintenance-component startup', () => {
     let element;
 
@@ -64,7 +68,7 @@ describe('c-scheduled-maintenance-component startup', () => {
     });
 
     it("formats dates in the user's Salesforce time zone", () => {
-        const start = Array.from(element.shadowRoot.querySelectorAll('p')).find((p) => p.textContent.startsWith('Start:'));
+        const start = cardParagraphs(element).find((p) => p.textContent.startsWith('Start:'));
         // 17:00 UTC is 10:00am in America/Los_Angeles
         expect(start.textContent).toMatch(/10\/09\/26, 10:00\sAM/);
     });

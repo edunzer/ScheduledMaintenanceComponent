@@ -1,3 +1,12 @@
-.multi-line {
-    white-space: pre-line;
+.admin-view {
+    min-height: 60px;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.admin-view__label {
+    font-weight: bold;
+}
+
+.modal-content {
+    overflow: auto;
 }

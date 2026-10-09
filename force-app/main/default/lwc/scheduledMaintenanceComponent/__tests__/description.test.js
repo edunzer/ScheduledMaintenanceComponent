@@ -25,6 +25,10 @@ const maintenance = (id, startHours, endHours) => ({
 // Lets the chained Apex promises in connectedCallback settle.
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+// Paragraphs inside the maintenance cards, which render in their own shadow roots.
+const cardParagraphs = (element) =>
+    Array.from(element.shadowRoot.querySelectorAll('c-maintenance-card')).flatMap((card) => Array.from(card.shadowRoot.querySelectorAll('p')));
+
 describe('c-scheduled-maintenance-component description', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -50,7 +54,7 @@ describe('c-scheduled-maintenance-component description', () => {
         document.body.appendChild(element);
         await flushPromises();
 
-        const descriptions = Array.from(element.shadowRoot.querySelectorAll('p')).filter((p) => p.textContent.startsWith('Description:'));
+        const descriptions = cardParagraphs(element).filter((p) => p.textContent.startsWith('Description:'));
         expect(descriptions).toHaveLength(records.length);
         descriptions.forEach((p) => expect(p.classList).toContain('multi-line'));
     });
