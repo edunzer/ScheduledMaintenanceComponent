@@ -22,6 +22,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     userTimeZone = null;
     userLocale = null;
     intervalId = null;
+    boundaryTimeoutId = null;
     isAdmin = false;
     profileName = '';
 
@@ -61,6 +62,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         if (this.intervalId) {
             clearTimeout(this.intervalId);
         }
+        clearTimeout(this.boundaryTimeoutId);
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
 
     // Fetches the scheduled maintenances from Apex
@@ -69,6 +72,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             .then(data => {
                 const now = new Date();
                 this.processScheduledMaintenances(data, now);
+                this.scheduleNextBoundary(data, now);
             })
             .catch(error => {
                 this.scheduledMaintenances = [];
@@ -78,6 +82,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Processes the fetched scheduled maintenances
     processScheduledMaintenances(data, now) {
+        // Drop records that have ended since they were fetched (when re-evaluated between fetches)
+        data = data.filter(record => this.parseUTCDate(record.End_Date_Time__c) >= now);
         // Use user's locale and timezone for formatting
         const userLocale = this.userLocale || navigator.language || 'en-US';
         const userTimeZone = this.userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -173,6 +179,35 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
         // Initial fetch
         fetchAndSetupNextInterval();
+        // Refetch when the user returns to the tab, so they don't see stale data
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+
+    handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            this.fetchScheduledMaintenances();
+        }
+    };
+
+    // Re-evaluates the fetched records when the next maintenance starts or ends, so the lock
+    // turns on and off on time instead of waiting for the next fetch. No server call is needed.
+    scheduleNextBoundary(data, now) {
+        clearTimeout(this.boundaryTimeoutId);
+        const upcomingBoundaries = data
+            .flatMap(record => [this.parseUTCDate(record.Start_Date_Time__c), this.parseUTCDate(record.End_Date_Time__c)])
+            .filter(date => date && date > now)
+            .map(date => date.getTime());
+        if (upcomingBoundaries.length === 0) {
+            return;
+        }
+        // Fire just after the boundary so the start/end comparisons have flipped. setTimeout can't wait
+        // longer than ~24.8 days, so cap the delay; firing early just re-evaluates and reschedules.
+        const delay = Math.min(Math.min(...upcomingBoundaries) - now.getTime() + 1000, 2147483647);
+        this.boundaryTimeoutId = setTimeout(() => {
+            const current = new Date();
+            this.processScheduledMaintenances(data, current);
+            this.scheduleNextBoundary(data, current);
+        }, delay);
     }
 
     // Updates the dismissible status based on system admin rights or maintenance conditions.
