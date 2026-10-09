@@ -107,7 +107,7 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
-        List<User> users = createTimeZoneUsers();
+        List<User> users = createViewers(TEST_TIME_ZONES);
 
         Test.startTest();
         for (User u : users) {
@@ -135,7 +135,7 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
-        List<User> users = createTimeZoneUsers();
+        List<User> users = createViewers(TEST_TIME_ZONES);
 
         Test.startTest();
         for (User u : users) {
@@ -162,7 +162,7 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
-        List<User> users = createTimeZoneUsers();
+        List<User> users = createViewers(TEST_TIME_ZONES);
 
         Test.startTest();
         for (User u : users) {
@@ -190,7 +190,7 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
-        List<User> users = createTimeZoneUsers();
+        List<User> users = createViewers(TEST_TIME_ZONES);
 
         Test.startTest();
         for (User u : users) {
@@ -250,15 +250,16 @@ public class ScheduledMaintenanceServiceTest {
             )
         };
 
+        User viewer = createViewers(new List<String>{'America/Los_Angeles'})[0];
+
         Test.startTest();
-        List<Object> results = ScheduledMaintenanceService.getActiveScheduledMaintenances('CRM');
+        List<Scheduled_Maintenance__c> results = getActiveAs(viewer, 'CRM');
         Test.stopTest();
 
         // 4 new CRM records + 1 active CRM record from @TestSetup (Subject CRM)
         Integer crmCount = 0;
-        for (Object o : results) {
-            Map<String, Object> maint = (Map<String, Object>)o;
-            if (((String)maint.get('Applicable_Apps__c')).contains('CRM')) {
+        for (Scheduled_Maintenance__c maint : results) {
+            if (maint.Applicable_Apps__c.contains('CRM')) {
                 crmCount++;
             }
         }
@@ -280,27 +281,15 @@ public class ScheduledMaintenanceServiceTest {
             Status__c = 'Scheduled'
         );
 
+        User viewer = createViewers(new List<String>{'America/Los_Angeles'})[0];
+
         Test.startTest();
-        List<Object> crmResults = ScheduledMaintenanceService.getActiveScheduledMaintenances('CRM');
-        List<Object> psaResults = ScheduledMaintenanceService.getActiveScheduledMaintenances('PSA');
+        Set<String> crmSubjects = getActiveSubjectsAs(viewer, 'CRM');
+        Set<String> psaSubjects = getActiveSubjectsAs(viewer, 'PSA');
         Test.stopTest();
 
-        Boolean foundInCRM = false;
-        Boolean foundInPSA = false;
-        for (Object o : crmResults) {
-            Map<String, Object> maint = (Map<String, Object>) o;
-            if (maint.get('Subject__c') == 'Multi-App Maintenance') {
-                foundInCRM = true;
-            }
-        }
-        for (Object o : psaResults) {
-            Map<String, Object> maint = (Map<String, Object>) o;
-            if (maint.get('Subject__c') == 'Multi-App Maintenance') {
-                foundInPSA = true;
-            }
-        }
-        Assert.isTrue(foundInCRM, 'A CRM;PSA maintenance should be returned for the CRM app: ' + crmResults);
-        Assert.isTrue(foundInPSA, 'A CRM;PSA maintenance should be returned for the PSA app: ' + psaResults);
+        Assert.isTrue(crmSubjects.contains('Multi-App Maintenance'), 'A CRM;PSA maintenance should be returned for the CRM app: ' + crmSubjects);
+        Assert.isTrue(psaSubjects.contains('Multi-App Maintenance'), 'A CRM;PSA maintenance should be returned for the PSA app: ' + psaSubjects);
     }
 
     @IsTest
@@ -318,18 +307,34 @@ public class ScheduledMaintenanceServiceTest {
             Status__c = 'Scheduled'
         );
 
+        User viewer = createViewers(new List<String>{'America/Los_Angeles'})[0];
+
         Test.startTest();
-        List<Object> smsResults = ScheduledMaintenanceService.getActiveScheduledMaintenances('SMS');
+        Set<String> smsSubjects = getActiveSubjectsAs(viewer, 'SMS');
         Test.stopTest();
 
-        for (Object o : smsResults) {
-            Map<String, Object> maint = (Map<String, Object>) o;
-            System.assertNotEquals(
-                'PSA Only Maintenance',
-                maint.get('Subject__c'),
-                'A PSA-only maintenance record should not appear in an SMS context query'
-            );
+        Assert.isFalse(smsSubjects.contains('PSA Only Maintenance'), 'A PSA-only maintenance record should not appear in an SMS context query');
+    }
+
+    @IsTest
+    static void testUserWithoutAccessGetsError() {
+        // The query runs in user mode, so a user without the Level 1 permission set gets an error rather than an empty list
+        User noAccess = buildUser('America/Los_Angeles');
+        insert noAccess;
+
+        Test.startTest();
+        String error;
+        System.runAs(noAccess) {
+            try {
+                ScheduledMaintenanceService.getActiveScheduledMaintenances(null);
+            } catch (AuraHandledException ex) {
+                error = ex.getMessage();
+            }
         }
+        Test.stopTest();
+
+        Assert.isNotNull(error, 'A user without access should get an error');
+        Assert.isTrue(error.startsWith('Unable to load scheduled maintenances'), error);
     }
 
     @IsTest
@@ -350,23 +355,6 @@ public class ScheduledMaintenanceServiceTest {
     }
 
     @IsTest
-    static void testGetUserLocaleInfo() {
-        User u = buildUser('Australia/Brisbane');
-        u.LocaleSidKey = 'en_AU';
-        insert u;
-
-        Map<String, Object> info;
-        Test.startTest();
-        System.runAs(u) {
-            info = ScheduledMaintenanceService.getUserLocaleInfo();
-        }
-        Test.stopTest();
-
-        Assert.areEqual('Australia/Brisbane', info.get('timeZone'), 'Should return the running user\'s time zone');
-        Assert.areEqual('en_AU', info.get('locale'), 'Should return the running user\'s locale');
-    }
-
-    @IsTest
     static void testGetUserProfileName() {
         String expected = [SELECT Name FROM Profile WHERE Id = :UserInfo.getProfileId()].Name;
 
@@ -377,11 +365,11 @@ public class ScheduledMaintenanceServiceTest {
         Assert.areEqual(expected, profileName, 'Should return the running user\'s profile name');
     }
 
-    // Builds (but does not insert) a user in the given time zone with the running user's profile.
+    // Builds (but does not insert) a Standard User in the given time zone. Without a permission set they can't read maintenances.
     private static User buildUser(String timeZone) {
         String uniqueKey = String.valueOf(Math.abs(Crypto.getRandomLong()));
         return new User(
-            ProfileId = UserInfo.getProfileId(),
+            ProfileId = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1].Id,
             Username = 'scheduledmaint.' + uniqueKey + '@example.com',
             Email = 'scheduledmaint.' + uniqueKey + '@example.com',
             LastName = 'Maintenance Test',
@@ -393,23 +381,39 @@ public class ScheduledMaintenanceServiceTest {
         );
     }
 
-    // Inserts one user for each of TEST_TIME_ZONES.
-    private static List<User> createTimeZoneUsers() {
+    // Inserts one user per time zone with the Level 1 permission set, the access the component's users need.
+    private static List<User> createViewers(List<String> timeZones) {
         List<User> users = new List<User>();
-        for (String timeZone : TEST_TIME_ZONES) {
+        for (String timeZone : timeZones) {
             users.add(buildUser(timeZone));
         }
-        insert users;
+        Id level1 = [SELECT Id FROM PermissionSet WHERE Name = 'Object_Scheduled_Maintenance_Level_1'].Id;
+        // runAs allows setup DML (users, permission set assignments) in the same test as maintenance records
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert users;
+            List<PermissionSetAssignment> assignments = new List<PermissionSetAssignment>();
+            for (User u : users) {
+                assignments.add(new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = level1));
+            }
+            insert assignments;
+        }
         return users;
+    }
+
+    // Returns the active maintenances returned when the given user calls the service.
+    private static List<Scheduled_Maintenance__c> getActiveAs(User u, String appContext) {
+        List<Scheduled_Maintenance__c> results;
+        System.runAs(u) {
+            results = ScheduledMaintenanceService.getActiveScheduledMaintenances(appContext);
+        }
+        return results;
     }
 
     // Returns the subjects of the active maintenances returned when the given user calls the service.
     private static Set<String> getActiveSubjectsAs(User u, String appContext) {
         Set<String> subjects = new Set<String>();
-        System.runAs(u) {
-            for (Object o : ScheduledMaintenanceService.getActiveScheduledMaintenances(appContext)) {
-                subjects.add((String) ((Map<String, Object>) o).get('Subject__c'));
-            }
+        for (Scheduled_Maintenance__c maint : getActiveAs(u, appContext)) {
+            subjects.add(maint.Subject__c);
         }
         return subjects;
     }

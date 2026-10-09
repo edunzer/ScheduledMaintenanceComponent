@@ -4,10 +4,6 @@
         <apexClass>ScheduledMaintenanceService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
-    <classAccesses>
-        <apexClass>ScheduledMaintenanceServiceTest</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
     <description>Scheduled Maintenance access - Read</description>
     <fieldPermissions>
         <editable>false</editable>

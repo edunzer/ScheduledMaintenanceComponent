@@ -1,58 +1,27 @@
 public with sharing class ScheduledMaintenanceService {
     // Retrieves active scheduled maintenances applicable to the specified app context.
+    // Runs in user mode, so users need read access to Scheduled_Maintenance__c and its fields (the Level 1 permission set).
     @AuraEnabled(cacheable=false)
-    public static List<Object> getActiveScheduledMaintenances(String appContext) {
-        // Record the current date and time.
+    public static List<Scheduled_Maintenance__c> getActiveScheduledMaintenances(String appContext) {
         DateTime now = DateTime.now();
-        System.debug('Current DateTime used: ' + now);
-        // Initialize a list with 'System' always included as a default filter.
-        List<String> filters = new List<String>{'System'};
-        // If an additional app context is provided, add it to the filters.
-        if (appContext != null && appContext != '') {
-            filters.add(appContext);
-        }
-
-        // Escape each filter value to prevent SOQL injection and breakage.
-        List<String> escapedFilters = new List<String>();
-        for (String f : filters) {
-            escapedFilters.add(String.escapeSingleQuotes(f));
-        }
-        // Concatenate all filters into a single string formatted for a SOQL query's INCLUDES clause.
-        String filterString = '\'' + String.join(escapedFilters, '\',\'') + '\'';
-        System.debug('Using filter: ' + filterString);
-        // Construct the SOQL query string. The current datetime is passed as a bind variable (:now) so it is
-        // compared as an absolute instant; formatting it into the string would shift it by the user's UTC offset.
-        String queryString = 'SELECT Id, Name, Start_Date_Time__c, End_Date_Time__c, Subject__c, Description__c, Alert_Frequency__c, Start_Date_with_Buffer__c, Dismissible__c, Applicable_Apps__c ' +
-                     'FROM Scheduled_Maintenance__c ' +
-                     'WHERE Start_Date_with_Buffer__c <= :now AND End_Date_Time__c >= :now AND Status__c = \'Scheduled\' ' +
-                     'AND Applicable_Apps__c INCLUDES (' + filterString + ')' + 
-                     'ORDER BY Start_Date_Time__c ASC'; // Orders the results by the start date.
-
+        // System maintenances apply to every app; with no app context, only those are returned.
+        String app = String.isBlank(appContext) ? 'System' : appContext;
         try {
-            // Execute the query and retrieve the list of scheduled maintenance records.
-            List<Scheduled_Maintenance__c> records = Database.query(queryString);
-            // Log the number of records fetched.
-            System.debug('Fetched records: ' + records.size());
-            // Convert date fields to UTC ISO strings for each record
-            List<Map<String, Object>> result = new List<Map<String, Object>>();
-            for (Scheduled_Maintenance__c rec : records) {
-                Map<String, Object> m = new Map<String, Object>();
-                m.put('Id', rec.Id);
-                m.put('Name', rec.Name);
-                m.put('Start_Date_Time__c', rec.Start_Date_Time__c != null ? rec.Start_Date_Time__c.formatGMT('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'') : null);
-                m.put('End_Date_Time__c', rec.End_Date_Time__c != null ? rec.End_Date_Time__c.formatGMT('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'') : null);
-                m.put('Subject__c', rec.Subject__c);
-                m.put('Description__c', rec.Description__c);
-                m.put('Alert_Frequency__c', rec.Alert_Frequency__c);
-                m.put('Start_Date_with_Buffer__c', rec.Start_Date_with_Buffer__c != null ? rec.Start_Date_with_Buffer__c.formatGMT('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'') : null);
-                m.put('Dismissible__c', rec.Dismissible__c);
-                m.put('Applicable_Apps__c', rec.Applicable_Apps__c);
-                result.add(m);
-            }
-            return (List<Object>)result;
+            return [
+                SELECT Id, Name, Start_Date_Time__c, End_Date_Time__c, Subject__c, Description__c, Alert_Frequency__c,
+                    Start_Date_with_Buffer__c, Dismissible__c, Applicable_Apps__c
+                FROM Scheduled_Maintenance__c
+                WHERE Start_Date_with_Buffer__c <= :now AND End_Date_Time__c >= :now AND Status__c = 'Scheduled'
+                    AND Applicable_Apps__c INCLUDES ('System', :app)
+                WITH USER_MODE
+                ORDER BY Start_Date_Time__c ASC
+            ];
         } catch (Exception ex) {
-            System.debug('Exception during Database.query: ' + ex.getMessage());
-            return new List<Object>();
+            // Usually missing access to the object or its fields. Let the component decide how to handle it.
+            String message = 'Unable to load scheduled maintenances: ' + ex.getMessage();
+            AuraHandledException auraEx = new AuraHandledException(message);
+            auraEx.setMessage(message);
+            throw auraEx;
         }
     }
 
@@ -69,15 +38,6 @@ public with sharing class ScheduledMaintenanceService {
         return null;
     }
 
-    // Retrieves the running user's timezone and locale
-    @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getUserLocaleInfo() {
-        User u = [SELECT Id, TimeZoneSidKey, LocaleSidKey FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
-        Map<String, Object> result = new Map<String, Object>();
-        result.put('timeZone', u.TimeZoneSidKey);
-        result.put('locale', u.LocaleSidKey);
-        return result;
-    }
     // Retrieves the running user's profile name
     @AuraEnabled(cacheable=true)
     public static String getUserProfileName() {
