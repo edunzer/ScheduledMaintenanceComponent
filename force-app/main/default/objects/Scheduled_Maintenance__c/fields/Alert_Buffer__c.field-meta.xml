@@ -3,6 +3,7 @@
     <fullName>Alert_Buffer__c</fullName>
     <defaultValue>0</defaultValue>
     <externalId>false</externalId>
+    <inlineHelpText>Days before Start Date/Time that the alert starts showing. Use Alert Buffer Hours to add hours.</inlineHelpText>
     <label>Alert Buffer</label>
     <precision>18</precision>
     <required>true</required>

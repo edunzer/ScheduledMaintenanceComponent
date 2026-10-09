@@ -7,6 +7,11 @@
     <description>Scheduled Maintenance access - Read</description>
     <fieldPermissions>
         <editable>false</editable>
+        <field>Scheduled_Maintenance__c.Alert_Buffer_Hours__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>Scheduled_Maintenance__c.Description__c</field>
         <readable>true</readable>
     </fieldPermissions>

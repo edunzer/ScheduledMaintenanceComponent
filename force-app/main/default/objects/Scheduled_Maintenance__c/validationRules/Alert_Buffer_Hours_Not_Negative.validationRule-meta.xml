@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Alert_Buffer_Hours_Not_Negative</fullName>
+    <active>true</active>
+    <errorConditionFormula>Alert_Buffer_Hours__c &lt; 0</errorConditionFormula>
+    <errorDisplayField>Alert_Buffer_Hours__c</errorDisplayField>
+    <errorMessage>Alert Buffer Hours can&apos;t be negative.</errorMessage>
+</ValidationRule>

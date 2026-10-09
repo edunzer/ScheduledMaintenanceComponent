@@ -13,7 +13,7 @@ Key features include:
 
 > All components by default have a app context of "System" so any scheduled maintenance records with "system" in the Applicable Apps field will show on every component.
 
-The component enhances user experience by providing timely alerts and essential information about maintenance activities, ensuring users are informed about potential disruptions. This can be done before the actual maintenance time if you want using the `Alert Buffer` field.
+The component enhances user experience by providing timely alerts and essential information about maintenance activities, ensuring users are informed about potential disruptions. This can be done before the actual maintenance time if you want using the `Alert Buffer` (days) and `Alert Buffer Hours` fields.
 
 ## Features
 
