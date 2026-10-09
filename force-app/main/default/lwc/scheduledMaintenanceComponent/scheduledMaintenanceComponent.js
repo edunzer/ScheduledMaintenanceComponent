@@ -6,7 +6,15 @@ import timeZone from '@salesforce/i18n/timeZone';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 import communityId from '@salesforce/community/Id';
 import hasBypassPermission from '@salesforce/customPermission/Bypass_Scheduled_Maintenance';
+import userId from '@salesforce/user/Id';
 import { NavigationMixin } from 'lightning/navigation';
+
+// Dismissals are stored per user, so on a shared computer one user's dismissals don't hide alerts from the next.
+const DISMISSALS_KEY = 'scheduledMaintenance_dismissed_' + userId;
+// Key used before dismissals were stored per user
+const LEGACY_DISMISSALS_KEY = 'scheduledMaintenance_dismissed';
+// Dismissals older than this are removed when saving; no frequency needs them
+const DISMISSAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
     scheduledMaintenances = [];
@@ -15,10 +23,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     isDismissible = true;
     // IDs of records dismissed during this page visit; used for the 'Every Visit' frequency.
     dismissedThisVisit = new Set();
-    isSystemMaintenance = false;
-    isInMaintenance = false;
     isFullLock = false;
-    scheduledMaintenances = [];
     inProgressMaintenances = [];
     upcomingMaintenances = [];
     @api title = 'Scheduled Maintenance Alert';
@@ -32,28 +37,31 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     intervalId = null;
     boundaryTimeoutId = null;
     isAdmin = false;
-    profileName = '';
+    isDisconnected = false;
 
     // Lifecycle hook that's called after the component is inserted into the DOM.
     connectedCallback() {
+        this.isDisconnected = false;
         this.fetchAppId();
         // Users with the bypass permission or the System Administrator profile see the admin view instead of the lock
         getUserProfileName()
             .then(profileName => {
-                this.profileName = profileName;
                 this.isAdmin = hasBypassPermission || profileName === 'System Administrator';
             })
             .catch(() => {
-                this.profileName = '';
                 this.isAdmin = hasBypassPermission;
             })
             .finally(() => {
-                // Fetches maintenances straight away, then on a schedule
-                this.setupIntervals();
+                // Fetches maintenances straight away, then on a schedule. Skipped if the component was
+                // removed while waiting, since disconnectedCallback has already run and couldn't clear the timers.
+                if (!this.isDisconnected) {
+                    this.setupIntervals();
+                }
             });
     }
 
     disconnectedCallback() {
+        this.isDisconnected = true;
         // Clear timeout when the component is destroyed
         if (this.intervalId) {
             clearTimeout(this.intervalId);
@@ -93,9 +101,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 ...record,
                 startDisplay: this.formatDateTimeLocal(record.Start_Date_Time__c, userLocale, userTimeZone),
                 endDisplay: this.formatDateTimeLocal(record.End_Date_Time__c, userLocale, userTimeZone),
-                Dismissible: this.calculateDismissible(record, now),
                 Subject: record.Subject__c,
-                BadgeLabel: !record.Dismissible__c ? (record.Applicable_Apps__c.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : '',
+                BadgeLabel: !record.Dismissible__c ? (appBadges.includes('System') ? 'Requires System Lock' : 'Requires App Lock') : '',
                 appBadges
             };
         });
@@ -115,8 +122,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
         // Sort inProgress: locking first, then by start date
         inProgress.sort((a, b) => {
-            const aLock = a.Applicable_Apps__c && a.Applicable_Apps__c.includes('System') && !a.Dismissible__c ? 0 : 1;
-            const bLock = b.Applicable_Apps__c && b.Applicable_Apps__c.includes('System') && !b.Dismissible__c ? 0 : 1;
+            const aLock = a.appBadges.includes('System') && !a.Dismissible__c ? 0 : 1;
+            const bLock = b.appBadges.includes('System') && !b.Dismissible__c ? 0 : 1;
             if (aLock !== bLock) return aLock - bLock;
             return new Date(a.Start_Date_Time__c) - new Date(b.Start_Date_Time__c);
         });
@@ -136,22 +143,13 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             this.activeSectionName = '';
         }
 
-        // Check maintenance status
-        data.some(record => {
-            const startDate = this.parseUTCDate(record.Start_Date_Time__c);
-            const endDate = this.parseUTCDate(record.End_Date_Time__c);
-            const isCurrent = now >= startDate && now <= endDate;
-            if (isCurrent) {
-                this.isInMaintenance = true;
-                if (record.Applicable_Apps__c.includes('System')) {
-                    this.isSystemMaintenance = true;
-                    return true;
-                }
-            }
-            return false;
-        });
         this.updateDismissibleStatus();
         this.isModalOpen = allRecords.length > 0;
+    }
+
+    // Whether any shown maintenance is in progress; recalculated whenever the records are re-evaluated.
+    get isInMaintenance() {
+        return this.inProgressMaintenances.length > 0;
     }
 
     // The configured alert title while a maintenance is in progress, otherwise the reminder title.
@@ -216,7 +214,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         this.isFullLock = this.scheduledMaintenances.some(record => {
             const startDate = this.parseUTCDate(record.Start_Date_Time__c);
             const endDate = this.parseUTCDate(record.End_Date_Time__c);
-            return record.Applicable_Apps__c.includes('System') && now >= startDate && now <= endDate && !record.Dismissible__c;
+            return record.appBadges.includes('System') && now >= startDate && now <= endDate && !record.Dismissible__c;
         });
         this.isDismissible = !this.isFullLock && this.scheduledMaintenances.every(record => {
             const startDate = this.parseUTCDate(record.Start_Date_Time__c);
@@ -226,15 +224,6 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     }
 
-    // Determines if a record is dismissible based on its start and end times.
-    calculateDismissible(record, now) {
-        const startDate = this.parseUTCDate(record.Start_Date_Time__c);
-        const endDate = this.parseUTCDate(record.End_Date_Time__c);
-        if (now >= startDate && now <= endDate && !record.Dismissible__c) {
-            return false; 
-        }
-        return now < startDate || record.Dismissible__c; 
-    }    
     // Fetches the app ID for navigation purposes. App navigation isn't available on Experience Cloud sites.
     fetchAppId() {
         if (communityId || !this.exitAppDeveloperName) {
@@ -271,13 +260,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     }
     // Dismisses all records by updating their last dismissed date.
     dismissAllRecords() {
-        // Load or initialize the dismissal array
-        let dismissedArr = [];
-        try {
-            dismissedArr = JSON.parse(localStorage.getItem('scheduledMaintenance_dismissed')) || [];
-        } catch (e) {
-            dismissedArr = [];
-        }
+        let dismissedArr = this.loadDismissals();
         const now = new Date().toISOString();
         this.scheduledMaintenances.forEach(record => {
             // Remove any previous dismissal for this record
@@ -286,8 +269,25 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             dismissedArr.push({ recordId: record.Id, dismissedAt: now });
             this.dismissedThisVisit.add(record.Id);
         });
-        localStorage.setItem('scheduledMaintenance_dismissed', JSON.stringify(dismissedArr));
+        this.saveDismissals(dismissedArr);
         this.isModalOpen = false;
+    }
+
+    // Loads this user's dismissals ({ recordId, dismissedAt }) from localStorage.
+    loadDismissals() {
+        try {
+            return JSON.parse(localStorage.getItem(DISMISSALS_KEY)) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // Saves this user's dismissals, dropping ones older than the retention period and the legacy shared key.
+    saveDismissals(dismissedArr) {
+        const cutoff = Date.now() - DISMISSAL_RETENTION_MS;
+        const recent = dismissedArr.filter(item => this.parseUTCDate(item.dismissedAt) >= cutoff);
+        localStorage.setItem(DISMISSALS_KEY, JSON.stringify(recent));
+        localStorage.removeItem(LEGACY_DISMISSALS_KEY);
     }
     
     // Determines if an alert should be shown based on its timing and dismissibility.
@@ -297,15 +297,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         if (currentDate >= startDate && currentDate <= endDate && !record.Dismissible__c) {
             return true;
         }
-        // Load dismissals array
-        let dismissedArr = [];
-        try {
-            dismissedArr = JSON.parse(localStorage.getItem('scheduledMaintenance_dismissed')) || [];
-        } catch (e) {
-            dismissedArr = [];
-        }
         // Find the most recent dismissal for this record
-        const dismissal = dismissedArr.find(item => item.recordId === record.Id);
+        const dismissal = this.loadDismissals().find(item => item.recordId === record.Id);
         let lastDismissed = null;
         if (dismissal) {
             lastDismissed = this.parseUTCDate(dismissal.dismissedAt);
@@ -345,24 +338,22 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     formatDateTimeLocal(dateTime, locale, timeZone) {
         if (!dateTime) return '';
         const d = this.parseUTCDate(dateTime);
-        // Fix locale if it uses underscore (e.g., en_AU -> en-AU)
+        // Keep only the language and region (e.g. de_DE_EURO -> de-DE); Intl rejects Salesforce's extra variants
         let safeLocale = locale;
-        if (typeof safeLocale === 'string' && safeLocale.includes('_')) {
-            safeLocale = safeLocale.replace('_', '-');
+        if (typeof safeLocale === 'string') {
+            safeLocale = safeLocale.split(/[_-]/).slice(0, 2).join('-');
         }
+        // The locale decides between 12- and 24-hour time
+        const options = {
+            year: '2-digit', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+            timeZone: timeZone
+        };
         try {
-            return d.toLocaleString(safeLocale, {
-                year: '2-digit', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', hour12: true,
-                timeZone: timeZone
-            });
+            return d.toLocaleString(safeLocale, options);
         } catch (e) {
             // fallback to default locale
-            return d.toLocaleString(undefined, {
-                year: '2-digit', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', hour12: true,
-                timeZone: timeZone
-            });
+            return d.toLocaleString(undefined, options);
         }
     }
 

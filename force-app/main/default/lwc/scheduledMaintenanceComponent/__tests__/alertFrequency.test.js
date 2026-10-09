@@ -25,7 +25,8 @@ const upcomingMaintenance = (frequency) => ({
 });
 
 const seedDismissal = (dismissedAt) =>
-    localStorage.setItem('scheduledMaintenance_dismissed', JSON.stringify([{ recordId: RECORD_ID, dismissedAt }]));
+    // Dismissals are stored per user; sfdx-lwc-jest's default user ID is 005000000000000000
+    localStorage.setItem('scheduledMaintenance_dismissed_005000000000000000', JSON.stringify([{ recordId: RECORD_ID, dismissedAt }]));
 
 // Lets the chained Apex promises settle without advancing the fake clock.
 const flushPromises = async () => {

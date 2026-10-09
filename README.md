@@ -9,7 +9,7 @@ Key features include:
 - Ensuring users remain informed without needing to refresh the page with auto data refresh. 
 - Blocking apps or the system from usage during maintenance time frames
 
-> Blocking users from access can be achieved as long as the component is placed on the appropriate Lightning pages and experience sites. The app context can be defined on the component located on the Lightning page. The targeted maintenance alert can be adjusted in the maintenance record based on the values of the multi-select picklist called `Applicable Apps`. The lock is a user-experience control, not access control; see [Limitations](#limitations).
+> Blocking users from access can be achieved as long as the component is placed on the appropriate Lightning pages and experience sites. The app context can be defined on the component located on the Lightning page, by picking one of the `Applicable Apps` values. The targeted maintenance alert can be adjusted in the maintenance record based on the values of the multi-select picklist called `Applicable Apps`. The lock is a user-experience control, not access control; see [Limitations](#limitations).
 
 > All components by default have a app context of "System" so any scheduled maintenance records with "system" in the Applicable Apps field will show on every component.
 
@@ -29,7 +29,7 @@ The component enhances user experience by providing timely alerts and essential 
   - **Every Visit**: on the next page load. It stays closed during background refreshes.
   - **Daily**: on the next calendar day in the user's Salesforce time zone.
   - **Weekly**: 7 days after it was dismissed.
-- **Record Specific Cache**: Uses local storage to independently track dismissals per maintenance record, ensuring each alert's frequency is evaluated separately.
+- **Record Specific Cache**: Uses local storage to independently track dismissals per maintenance record, ensuring each alert's frequency is evaluated separately. Dismissals are stored per Salesforce user, so on a shared computer one user's dismissals don't hide alerts from the next, and entries older than 30 days are removed.
 - **System and Application Maintenance**:
   - Differentiates between system-wide maintenance and application-specific maintenance.
   - Provides visual cues (e.g., badges) for alerts requiring system or app lock.
