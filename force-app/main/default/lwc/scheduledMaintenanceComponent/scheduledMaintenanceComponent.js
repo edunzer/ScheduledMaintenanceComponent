@@ -12,6 +12,7 @@ import {
     addDismissals,
     canDismiss,
     hasFullLock,
+    isAlertWindowOpen,
     msUntilNextBoundary,
     parseUTCDate,
     pruneDismissals,
@@ -136,6 +137,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         const allRecords = data
             // Drop records that have ended since they were fetched (when re-evaluated between fetches)
             .filter(record => parseUTCDate(record.End_Date_Time__c) >= now)
+            // Records fetched ahead of their alert window are shown once it starts
+            .filter(record => isAlertWindowOpen(record, now))
             .filter(record => shouldShowAlert(record, now, { dismissals, dismissedThisVisit: this.dismissedThisVisit, timeZone: userTimeZone }))
             .map(record => toDisplayRecord(record, userLocale, userTimeZone));
         const { inProgress, upcoming } = splitByStatus(allRecords, now);
@@ -198,7 +201,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         }
     };
 
-    // Re-evaluates the fetched records when the next maintenance starts or ends, so the lock
+    // Re-evaluates the fetched records when the next alert window starts or a maintenance starts or ends, so the lock
     // turns on and off on time instead of waiting for the next fetch. No server call is needed.
     scheduleNextBoundary(data, now) {
         clearTimeout(this.boundaryTimeoutId);

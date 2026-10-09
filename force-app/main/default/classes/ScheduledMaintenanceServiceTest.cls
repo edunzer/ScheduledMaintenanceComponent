@@ -121,8 +121,8 @@ public class ScheduledMaintenanceServiceTest {
 
     @IsTest
     static void testStartBoundaryExcludesFutureMaintenances() {
-        // A record whose Start_Date_with_Buffer__c is in the future (no buffer) must not be returned.
-        // It starts soon but ends much later, so a query shifted ahead by a UTC+ offset would wrongly include it.
+        // A record whose Start_Date_with_Buffer__c is beyond the look-ahead window (no buffer) must not be returned.
+        // It starts in an hour but ends much later, so a query shifted ahead by a UTC+ offset would wrongly include it.
         DateTime now = DateTime.now();
         insert new Scheduled_Maintenance__c(
             Start_Date_Time__c = now.addHours(1),
@@ -143,6 +143,45 @@ public class ScheduledMaintenanceServiceTest {
                 getActiveSubjectsAs(u, null).contains('Future Maintenance'),
                 'A maintenance whose start is in the future should not be returned for a user in ' + u.TimeZoneSidKey
             );
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
+    static void testLookAheadReturnsMaintenancesStartingSoon() {
+        // Records whose alert window starts within the look-ahead window are returned early, so the component
+        // can show them on time between refreshes; later ones are not
+        DateTime now = DateTime.now();
+        Integer lookahead = ScheduledMaintenanceService.LOOKAHEAD_MINUTES;
+        insert new List<Scheduled_Maintenance__c>{
+            new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now.addMinutes(lookahead - 15),
+                End_Date_Time__c = now.addHours(2),
+                Subject__c = 'Starting Soon',
+                Alert_Frequency__c = 'Daily',
+                Alert_Buffer__c = 0,
+                Dismissible__c = false,
+                Applicable_Apps__c = 'System',
+                Status__c = 'Scheduled'
+            ),
+            new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now.addMinutes(lookahead + 15),
+                End_Date_Time__c = now.addHours(2),
+                Subject__c = 'Starting Later',
+                Alert_Frequency__c = 'Daily',
+                Alert_Buffer__c = 0,
+                Dismissible__c = false,
+                Applicable_Apps__c = 'System',
+                Status__c = 'Scheduled'
+            )
+        };
+        List<User> users = createViewers(TEST_TIME_ZONES);
+
+        Test.startTest();
+        for (User u : users) {
+            Set<String> subjects = getActiveSubjectsAs(u, null);
+            Assert.isTrue(subjects.contains('Starting Soon'), 'A maintenance starting within the look-ahead window should be returned for a user in ' + u.TimeZoneSidKey);
+            Assert.isFalse(subjects.contains('Starting Later'), 'A maintenance starting after the look-ahead window should not be returned for a user in ' + u.TimeZoneSidKey);
         }
         Test.stopTest();
     }

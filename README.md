@@ -21,6 +21,8 @@ The component enhances user experience by providing timely alerts and essential 
 - **Interval-based Data Refresh**: 
   - Refreshes data every 5 minutes for the first 30 minutes.
   - After the first 30 minutes, refreshes data every 30 minutes indefinitely.
+  - Refreshes again when the user returns to the tab.
+  - Between refreshes, alerts and locks still start and end on time: maintenances starting within the next 35 minutes are loaded ahead, and the component re-checks at each alert, start and end time.
 - **Maintenance Alerts**:
   - Displays a modal dialog with maintenance alerts.
   - Alerts are shown based on the maintenance schedule and user interaction history.
