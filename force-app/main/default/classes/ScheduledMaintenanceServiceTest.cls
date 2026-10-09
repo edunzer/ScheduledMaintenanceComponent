@@ -203,6 +203,74 @@ public class ScheduledMaintenanceServiceTest {
     }
 
     @IsTest
+    static void testAlertBufferHoursEnablesEarlyVisibility() {
+        // Alert_Buffer_Hours__c moves Start_Date_with_Buffer__c earlier by hours, on top of the Alert_Buffer__c days
+        DateTime now = DateTime.now();
+        insert new List<Scheduled_Maintenance__c>{
+            new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now.addHours(2),
+                End_Date_Time__c = now.addHours(4),
+                Subject__c = 'Three Hour Buffer',
+                Alert_Frequency__c = 'Daily',
+                Alert_Buffer__c = 0,
+                Alert_Buffer_Hours__c = 3, // visible from 1 hour ago
+                Dismissible__c = true,
+                Applicable_Apps__c = 'System',
+                Status__c = 'Scheduled'
+            ),
+            new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now.addHours(2),
+                End_Date_Time__c = now.addHours(4),
+                Subject__c = 'One Hour Buffer',
+                Alert_Frequency__c = 'Daily',
+                Alert_Buffer__c = 0,
+                Alert_Buffer_Hours__c = 1, // not visible for another hour
+                Dismissible__c = true,
+                Applicable_Apps__c = 'System',
+                Status__c = 'Scheduled'
+            )
+        };
+        List<User> users = createViewers(TEST_TIME_ZONES);
+
+        Test.startTest();
+        for (User u : users) {
+            Set<String> subjects = getActiveSubjectsAs(u, null);
+            Assert.isTrue(subjects.contains('Three Hour Buffer'), 'A maintenance within its hours buffer should be returned for a user in ' + u.TimeZoneSidKey);
+            Assert.isFalse(subjects.contains('One Hour Buffer'), 'A maintenance before its hours buffer should not be returned for a user in ' + u.TimeZoneSidKey);
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
+    static void testValidationRules() {
+        DateTime now = DateTime.now();
+        Map<String, Scheduled_Maintenance__c> invalidRecords = new Map<String, Scheduled_Maintenance__c>{
+            'End Date/Time must be after Start Date/Time.' => new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now, End_Date_Time__c = now.addHours(-1), Alert_Buffer__c = 0
+            ),
+            'Alert Buffer can\'t be negative.' => new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now, End_Date_Time__c = now.addHours(1), Alert_Buffer__c = -1
+            ),
+            'Alert Buffer Hours can\'t be negative.' => new Scheduled_Maintenance__c(
+                Start_Date_Time__c = now, End_Date_Time__c = now.addHours(1), Alert_Buffer__c = 0, Alert_Buffer_Hours__c = -1
+            )
+        };
+
+        Test.startTest();
+        for (String expectedError : invalidRecords.keySet()) {
+            Scheduled_Maintenance__c record = invalidRecords.get(expectedError);
+            record.Subject__c = 'Invalid';
+            record.Alert_Frequency__c = 'Daily';
+            record.Applicable_Apps__c = 'System';
+            record.Status__c = 'Scheduled';
+            Database.SaveResult result = Database.insert(record, false);
+            Assert.isFalse(result.isSuccess(), 'Should be rejected: ' + expectedError);
+            Assert.areEqual(expectedError, result.getErrors()[0].getMessage());
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
     static void testOverlappingMaintenanceWindowsAllReturned() {
         // Multiple overlapping active windows for the same app context must all be returned together
         DateTime now = DateTime.now();

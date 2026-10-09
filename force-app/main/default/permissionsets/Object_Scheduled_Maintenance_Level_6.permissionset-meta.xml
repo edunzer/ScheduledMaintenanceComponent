@@ -7,6 +7,11 @@
     <description>Scheduled Maintenance access - Read, Edit, Create, Delete, View All, Modify All</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Scheduled_Maintenance__c.Alert_Buffer_Hours__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Scheduled_Maintenance__c.Description__c</field>
         <readable>true</readable>
     </fieldPermissions>
