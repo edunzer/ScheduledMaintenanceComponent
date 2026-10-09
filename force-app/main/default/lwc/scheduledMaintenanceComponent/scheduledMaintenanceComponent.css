@@ -10,3 +10,9 @@
 .modal-content {
     overflow: auto;
 }
+
+.lock-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

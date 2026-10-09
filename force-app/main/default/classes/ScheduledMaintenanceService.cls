@@ -32,17 +32,11 @@ public with sharing class ScheduledMaintenanceService {
         }
     }
 
-    // Retrieves the App ID based on the developer name specified, useful for navigation purposes.
+    // Retrieves the app users can go to when this app is locked: its ID for navigation and its label for the button.
     @AuraEnabled(cacheable=true)
-    public static String getAppIdByDeveloperName(String developerName) {
-        // Query to find an app by its developer name, limited to one result.
-        List<AppDefinition> apps = [SELECT DurableId FROM AppDefinition WHERE DeveloperName = :developerName LIMIT 1];
-        // If an app is found, return its durable ID.
-        if (!apps.isEmpty()) {
-            return apps[0].DurableId;
-        }
-        // Return null if no matching app is found.
-        return null;
+    public static AppDefinition getAppByDeveloperName(String developerName) {
+        List<AppDefinition> apps = [SELECT DurableId, Label FROM AppDefinition WHERE DeveloperName = :developerName LIMIT 1];
+        return apps.isEmpty() ? null : apps[0];
     }
 
     // Retrieves the running user's profile name

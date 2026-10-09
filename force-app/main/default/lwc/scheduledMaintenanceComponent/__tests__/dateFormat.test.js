@@ -1,7 +1,7 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 // A Salesforce locale with a variant that Intl rejects as-is, in a 24-hour time zone. Each test file loads
@@ -9,7 +9,7 @@ import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.get
 jest.mock('@salesforce/i18n/locale', () => ({ default: 'de_DE_EURO' }), { virtual: true });
 jest.mock('@salesforce/i18n/timeZone', () => ({ default: 'Europe/Berlin' }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
 // Lets the chained Apex promises settle without advancing the fake clock.
@@ -36,7 +36,7 @@ describe('c-scheduled-maintenance-component date format', () => {
         jest.setSystemTime(new Date('2026-10-09T16:00:00Z'));
         localStorage.clear();
         getUserProfileName.mockResolvedValue('Standard User');
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
         getActiveScheduledMaintenances.mockResolvedValue([
             {
                 Id: 'a00000000000001AAA',

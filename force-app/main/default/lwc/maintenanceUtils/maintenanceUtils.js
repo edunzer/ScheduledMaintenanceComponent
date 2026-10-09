@@ -138,6 +138,57 @@ export function formatDateTime(value, locale, timeZone) {
     }
 }
 
+// The year of a date in the given time zone.
+function yearIn(date, timeZone) {
+    try {
+        return new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone }).format(date);
+    } catch (e) {
+        return String(date.getUTCFullYear());
+    }
+}
+
+// A formatter for weekday, date, time and time zone, e.g. "Wed, Mar 18, 4:00 PM PDT". The year is added only
+// when one of the dates isn't in the current year.
+function dateTimeFormatter(dates, now, locale, timeZone) {
+    const options = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' };
+    if (dates.some(date => yearIn(date, timeZone) !== yearIn(now, timeZone))) {
+        options.year = 'numeric';
+    }
+    // Keep only the language and region (e.g. de_DE_EURO -> de-DE); Intl rejects Salesforce's extra variants
+    const intlLocale = typeof locale === 'string' ? locale.split(/[_-]/).slice(0, 2).join('-') : locale;
+    // Fall back to the browser's locale, then also its time zone, if Intl rejects the user's
+    for (const [fallbackLocale, fallbackTimeZone] of [[intlLocale, timeZone], [undefined, timeZone], [undefined, undefined]]) {
+        try {
+            return new Intl.DateTimeFormat(fallbackLocale, { ...options, timeZone: fallbackTimeZone });
+        } catch (e) {
+            // try the next fallback
+        }
+    }
+    return null;
+}
+
+// Formats a single date and time, e.g. "Wed, Mar 18, 4:00 PM PDT".
+export function formatMoment(value, now, locale, timeZone) {
+    const date = parseUTCDate(value);
+    return date ? dateTimeFormatter([date], now, locale, timeZone).format(date) : '';
+}
+
+// Says what's locked and until when, e.g. "CRM is unavailable until Wed, Mar 18, 4:00 PM PDT.", or '' if nothing is.
+export function lockSummary(records, now, { appContext, locale, timeZone } = {}) {
+    const locking = records.filter(record => isLocking(record, now));
+    if (locking.length === 0) {
+        return '';
+    }
+    const lockEnd = new Date(Math.max(...locking.map(record => parseUTCDate(record.End_Date_Time__c).getTime())));
+    let what = 'This app is';
+    if (hasFullLock(records, now)) {
+        what = 'All apps are';
+    } else if (appContext) {
+        what = `${appContext} is`;
+    }
+    return `${what} unavailable until ${formatMoment(lockEnd, now, locale, timeZone)}.`;
+}
+
 // Adds the fields the maintenance cards display: formatted times, subject, lock badge label and app badges.
 export function toDisplayRecord(record, locale, timeZone) {
     const appBadges = getAppBadges(record);

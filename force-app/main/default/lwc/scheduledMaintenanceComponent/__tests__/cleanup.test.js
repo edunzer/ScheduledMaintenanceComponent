@@ -1,11 +1,11 @@
 import { createElement } from 'lwc';
 import ScheduledMaintenanceComponent from 'c/scheduledMaintenanceComponent';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances', () => ({ default: jest.fn() }), { virtual: true });
-jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
+jest.mock('@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName', () => ({ default: jest.fn() }), { virtual: true });
 jest.mock('@salesforce/apex/ScheduledMaintenanceService.getUserProfileName', () => ({ default: jest.fn() }), { virtual: true });
 
 // sfdx-lwc-jest's default user ID
@@ -32,7 +32,7 @@ const flushPromises = async () => {
     }
 };
 
-const isModalOpen = (element) => element.shadowRoot.querySelector('section[role="dialog"]') !== null;
+const isModalOpen = (element) => element.shadowRoot.querySelector('section.slds-modal') !== null;
 
 describe('c-scheduled-maintenance-component cleanup', () => {
     beforeEach(() => {
@@ -40,7 +40,7 @@ describe('c-scheduled-maintenance-component cleanup', () => {
         jest.setSystemTime(NOW);
         localStorage.clear();
         getUserProfileName.mockResolvedValue('Standard User');
-        getAppIdByDeveloperName.mockResolvedValue(null);
+        getAppByDeveloperName.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -61,12 +61,12 @@ describe('c-scheduled-maintenance-component cleanup', () => {
     it('switches back to the reminder title when the in-progress maintenance ends', async () => {
         getActiveScheduledMaintenances.mockResolvedValue([maintenance('a01', -60, 2), maintenance('a02', 60, 120)]);
         const element = await render();
-        expect(element.shadowRoot.querySelector('header h2').textContent).toBe('Scheduled Maintenance Alert');
+        expect(element.shadowRoot.querySelector('header h1').textContent).toBe('Scheduled Maintenance Alert');
 
         jest.advanceTimersByTime(2.1 * 60 * 1000);
         await flushPromises();
 
-        expect(element.shadowRoot.querySelector('header h2').textContent).toBe('Scheduled Maintenance Reminder');
+        expect(element.shadowRoot.querySelector('header h1').textContent).toBe('Scheduled Maintenance Reminder');
     });
 
     it('does not start polling if removed before the startup calls finish', async () => {

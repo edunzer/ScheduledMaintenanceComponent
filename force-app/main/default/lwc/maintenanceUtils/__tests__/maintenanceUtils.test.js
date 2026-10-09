@@ -2,11 +2,13 @@ import {
     addDismissals,
     canDismiss,
     formatDateTime,
+    formatMoment,
     frequencyAllowsAlert,
     getAppBadges,
     hasFullLock,
     isAlertWindowOpen,
     isInProgress,
+    lockSummary,
     msUntilNextBoundary,
     parseUTCDate,
     pruneDismissals,
@@ -215,6 +217,43 @@ describe('formatDateTime', () => {
 
     it('returns an empty string for a blank value', () => {
         expect(formatDateTime(null, 'en-US', 'UTC')).toBe('');
+    });
+});
+
+describe('formatMoment', () => {
+    it('shows the weekday, date, time and time zone', () => {
+        expect(formatMoment('2026-10-09T17:00:00.000Z', NOW, 'en-US', 'America/Los_Angeles')).toMatch(/^Fri, Oct 9, 10:00\sAM PDT$/);
+        expect(formatMoment('2026-10-09T17:00:00.000Z', NOW, 'de_DE_EURO', 'Europe/Berlin')).toBe('Fr., 9. Okt., 19:00 MESZ');
+    });
+
+    it('adds the year only when it is not the current one', () => {
+        expect(formatMoment('2027-01-04T17:00:00.000Z', NOW, 'en-US', 'UTC')).toMatch(/^Mon, Jan 4, 2027, 5:00\sPM UTC$/);
+    });
+
+    it('falls back to the default locale and time zone if they are not recognized', () => {
+        expect(formatMoment(NOW, NOW, 'xx_INVALID_LOCALE_TAG_1234567890', 'Not/AZone')).not.toBe('');
+        expect(formatMoment(null, NOW, 'en-US', 'UTC')).toBe('');
+    });
+});
+
+describe('lockSummary', () => {
+    const options = { locale: 'en-US', timeZone: 'UTC' };
+
+    it('is empty when nothing is locked', () => {
+        expect(lockSummary([record()], NOW, options)).toBe('');
+    });
+
+    it('says all apps are locked for a System lock, until it ends', () => {
+        expect(lockSummary([record({ Dismissible__c: false })], NOW, options)).toMatch(/^All apps are unavailable until Fri, Oct 9, 6:00\sPM UTC\.$/);
+    });
+
+    it('names the app for an app lock, and runs until the last overlapping lock ends', () => {
+        const records = [
+            record({ Id: 'a', Dismissible__c: false, Applicable_Apps__c: 'CRM', End_Date_Time__c: at(60) }),
+            record({ Id: 'b', Dismissible__c: false, Applicable_Apps__c: 'CRM', End_Date_Time__c: at(120) })
+        ];
+        expect(lockSummary(records, NOW, { ...options, appContext: 'CRM' })).toMatch(/^CRM is unavailable until Fri, Oct 9, 7:00\sPM UTC\.$/);
+        expect(lockSummary(records, NOW, options)).toMatch(/^This app is unavailable until /);
     });
 });
 

@@ -1,6 +1,6 @@
 import { LightningElement, api } from 'lwc';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
-import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
+import getAppByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppByDeveloperName';
 import locale from '@salesforce/i18n/locale';
 import timeZone from '@salesforce/i18n/timeZone';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
@@ -12,6 +12,7 @@ import {
     canDismiss,
     hasFullLock,
     isAlertWindowOpen,
+    lockSummary,
     msUntilNextBoundary,
     parseUTCDate,
     pruneDismissals,
@@ -30,6 +31,9 @@ const DISMISSAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
     scheduledMaintenances = [];
     appId = null;
+    appLabel = '';
+    // What's locked and until when, shown in the header of a lock
+    lockSummary = '';
     isModalOpen = false;
     isDismissible = true;
     // IDs of records dismissed during this page visit; used for the 'Every Visit' frequency.
@@ -85,7 +89,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Moves focus into the dialog when it opens, so keyboard and screen reader users start inside it.
     renderedCallback() {
-        const dialog = this.template.querySelector('section[role="dialog"]');
+        const dialog = this.template.querySelector('section.slds-modal');
         if (!dialog) {
             this.dialogFocused = false;
         } else if (!this.dialogFocused) {
@@ -105,12 +109,12 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     // Shift+Tab from the top of the dialog wraps to its last control: the footer button, if there is one.
     handleFocusStartGuard() {
         const footerButton = this.template.querySelector('footer lightning-button');
-        (footerButton || this.template.querySelector('section[role="dialog"]')).focus();
+        (footerButton || this.template.querySelector('section.slds-modal')).focus();
     }
 
     // Tab past the last control wraps to the top of the dialog.
     handleFocusEndGuard() {
-        this.template.querySelector('section[role="dialog"]').focus();
+        this.template.querySelector('section.slds-modal').focus();
     }
 
     // Fetches the scheduled maintenances from Apex
@@ -156,6 +160,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         }
 
         this.isFullLock = hasFullLock(allRecords, now);
+        this.lockSummary = lockSummary(allRecords, now, { appContext: this.currentAppContext, locale: userLocale, timeZone: userTimeZone });
         this.isDismissible = canDismiss(allRecords, now);
         this.isModalOpen = allRecords.length > 0;
     }
@@ -222,15 +227,16 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         if (!this.exitAppDeveloperName) {
             return;
         }
-        getAppIdByDeveloperName({ developerName: this.exitAppDeveloperName })
-            .then(appId => {
-                if (!appId) {
+        getAppByDeveloperName({ developerName: this.exitAppDeveloperName })
+            .then(app => {
+                if (!app) {
                     return null;
                 }
-                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: appId } }).then(url => (url ? appId : null));
+                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: app.DurableId } }).then(url => (url ? app : null));
             })
-            .then(appId => {
-                this.appId = appId;
+            .then(app => {
+                this.appId = app ? app.DurableId : null;
+                this.appLabel = app ? app.Label : '';
             })
             .catch(error => {
                 console.error('Error fetching App ID:', error);
@@ -245,7 +251,18 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         return !this.isDismissible;
     }
     get exitButtonLabel() {
-        return `Navigate to ${this.exitAppDeveloperName} App`;
+        return `Go to ${this.appLabel}`;
+    }
+    // Locks use the SLDS prompt pattern: an alert dialog with a warning-themed header.
+    get dialogRole() {
+        return this.isAppClosed ? 'alertdialog' : 'dialog';
+    }
+    get headerClass() {
+        return this.isAppClosed ? 'slds-modal__header slds-theme_warning slds-theme_alert-texture' : 'slds-modal__header';
+    }
+    // A full lock has no buttons, so the footer is left out.
+    get hasFooterButtons() {
+        return this.isDismissible || this.showExitButton;
     }
     // Navigates to another app based on the fetched app ID.
     navigateToApp() {
