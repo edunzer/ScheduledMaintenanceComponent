@@ -5,6 +5,7 @@ import locale from '@salesforce/i18n/locale';
 import timeZone from '@salesforce/i18n/timeZone';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 import communityId from '@salesforce/community/Id';
+import hasBypassPermission from '@salesforce/customPermission/Bypass_Scheduled_Maintenance';
 import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
@@ -36,15 +37,15 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     // Lifecycle hook that's called after the component is inserted into the DOM.
     connectedCallback() {
         this.fetchAppId();
-        // Fetch user profile name first
+        // Users with the bypass permission or the System Administrator profile see the admin view instead of the lock
         getUserProfileName()
             .then(profileName => {
                 this.profileName = profileName;
-                this.isAdmin = profileName === 'System Administrator';
+                this.isAdmin = hasBypassPermission || profileName === 'System Administrator';
             })
             .catch(() => {
                 this.profileName = '';
-                this.isAdmin = false;
+                this.isAdmin = hasBypassPermission;
             })
             .finally(() => {
                 // Fetches maintenances straight away, then on a schedule
