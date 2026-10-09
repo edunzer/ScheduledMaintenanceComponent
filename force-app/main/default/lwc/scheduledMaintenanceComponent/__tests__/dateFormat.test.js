@@ -19,6 +19,10 @@ const flushPromises = async () => {
     }
 };
 
+// Paragraphs inside the maintenance cards, which render in their own shadow roots.
+const cardParagraphs = (element) =>
+    Array.from(element.shadowRoot.querySelectorAll('c-maintenance-card')).flatMap((card) => Array.from(card.shadowRoot.querySelectorAll('p')));
+
 describe('c-scheduled-maintenance-component date format', () => {
     afterEach(() => {
         while (document.body.firstChild) {
@@ -49,7 +53,7 @@ describe('c-scheduled-maintenance-component date format', () => {
         document.body.appendChild(element);
         await flushPromises();
 
-        const start = Array.from(element.shadowRoot.querySelectorAll('p')).find((p) => p.textContent.startsWith('Start:'));
+        const start = cardParagraphs(element).find((p) => p.textContent.startsWith('Start:'));
         // 17:00 UTC is 19:00 in Berlin, written the German way
         expect(start.textContent).toBe('Start: 09.10.26, 19:00');
     });

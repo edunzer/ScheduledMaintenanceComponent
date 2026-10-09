@@ -237,9 +237,13 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 console.error('Error fetching App ID:', error);
             });
     }
-    // The exit button is only shown once the target app has been found.
+    // The exit button is only shown for an app lock (not a full System lock), once the target app has been found.
     get showExitButton() {
-        return !!this.appId;
+        return !!this.appId && !this.isFullLock;
+    }
+    // A maintenance that can't be dismissed is in progress, so the app is closed.
+    get isAppClosed() {
+        return !this.isDismissible;
     }
     get exitButtonLabel() {
         return `Navigate to ${this.exitAppDeveloperName} App`;
