@@ -45,7 +45,7 @@ The component reads maintenance records with the user's own object and field per
 
 - **Object - Scheduled Maintenance - Level 1**: read access. Required for every user who sees the component. Without it the component can't load maintenances, and no alert or lock is shown.
 - **Object - Scheduled Maintenance - Level 6**: full access, for people who create and edit maintenance records.
-- **Scheduled Maintenance Bypass**: exempts users from the lock (see Admin View).
+- **Scheduled Maintenance Bypass**: exempts users from the lock (see Admin View) and from Maintenance Mode checks (see Limitations).
 
 Maintenance records are shared org-wide as Public Read Only.
 
@@ -61,8 +61,30 @@ The System Lock and App Lock are a user-experience control, not access control. 
 That's fine when the lock is a courtesy notice. If data integrity depends on keeping users out during maintenance, add a server-side control as well, for example:
 
 - A Login Flow that blocks or warns non-admin users at login while a System lock is active. This only applies at login, not to sessions that are already open.
-- A "maintenance mode" hierarchy custom setting, turned on for the maintenance window and checked by validation rules or triggers on key objects, with a custom permission that lets admins and integration users bypass it.
+- The included Maintenance Mode setting, checked by validation rules or triggers on key objects (see below).
 - Temporarily removing permission set assignments from affected users during the window.
+
+### Server-side lock with Maintenance Mode
+
+The `Scheduled Maintenance Settings` hierarchy custom setting has a `Maintenance Mode` checkbox. It does nothing on its own: you check it in validation rules or triggers on the objects you want to protect, then turn it on for the maintenance window.
+
+1. Add a validation rule to each object to protect, for example on Account:
+
+   ```
+   $Setup.Scheduled_Maintenance_Settings__c.Maintenance_Mode__c && NOT($Permission.Bypass_Scheduled_Maintenance)
+   ```
+
+   with an error message such as "Salesforce is in scheduled maintenance. Changes are blocked until it ends." In Apex triggers, use the same check:
+
+   ```apex
+   if (Scheduled_Maintenance_Settings__c.getInstance().Maintenance_Mode__c
+           && !FeatureManagement.checkPermission('Bypass_Scheduled_Maintenance')) {
+       record.addError('Salesforce is in scheduled maintenance. Changes are blocked until it ends.');
+   }
+   ```
+
+2. Assign the `Scheduled Maintenance Bypass` permission set to admins and integration users who must keep working.
+3. When the maintenance starts, go to **Setup > Custom Settings > Scheduled Maintenance Settings > Manage** and check `Maintenance Mode` in the organization default, or for specific profiles or users. Uncheck it when the maintenance ends. A scheduled flow can do this for you.
 
 ## Examples
 - **Non Dismissable**
