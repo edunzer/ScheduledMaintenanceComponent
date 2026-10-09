@@ -5,6 +5,7 @@ import {
     frequencyAllowsAlert,
     getAppBadges,
     hasFullLock,
+    isAlertWindowOpen,
     isInProgress,
     msUntilNextBoundary,
     parseUTCDate,
@@ -45,6 +46,15 @@ describe('isInProgress', () => {
         expect(isInProgress(record({ End_Date_Time__c: at(0) }), NOW)).toBe(true);
         expect(isInProgress(record({ Start_Date_Time__c: at(1) }), NOW)).toBe(false);
         expect(isInProgress(record({ End_Date_Time__c: at(-1) }), NOW)).toBe(false);
+    });
+});
+
+describe('isAlertWindowOpen', () => {
+    it('is open once Start_Date_with_Buffer__c has passed, or when it is missing', () => {
+        expect(isAlertWindowOpen(record({ Start_Date_with_Buffer__c: at(-1) }), NOW)).toBe(true);
+        expect(isAlertWindowOpen(record({ Start_Date_with_Buffer__c: at(0) }), NOW)).toBe(true);
+        expect(isAlertWindowOpen(record({ Start_Date_with_Buffer__c: at(1) }), NOW)).toBe(false);
+        expect(isAlertWindowOpen(record(), NOW)).toBe(true);
     });
 });
 
@@ -173,6 +183,13 @@ describe('msUntilNextBoundary', () => {
     it('waits until just after the next start or end time', () => {
         expect(msUntilNextBoundary([record({ Start_Date_Time__c: at(10), End_Date_Time__c: at(60) })], NOW)).toBe(10 * 60 * 1000 + 1000);
         expect(msUntilNextBoundary([record({ End_Date_Time__c: at(5) })], NOW)).toBe(5 * 60 * 1000 + 1000);
+    });
+
+    it('includes the start of the alert window', () => {
+        const fetchedEarly = record({ Start_Date_with_Buffer__c: at(3), Start_Date_Time__c: at(3), End_Date_Time__c: at(60) });
+        expect(msUntilNextBoundary([fetchedEarly], NOW)).toBe(3 * 60 * 1000 + 1000);
+        const buffered = record({ Start_Date_with_Buffer__c: at(5), Start_Date_Time__c: at(65), End_Date_Time__c: at(120) });
+        expect(msUntilNextBoundary([buffered], NOW)).toBe(5 * 60 * 1000 + 1000);
     });
 
     it('returns null when nothing changes later', () => {

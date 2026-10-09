@@ -81,6 +81,20 @@ describe('c-scheduled-maintenance-component lock timing', () => {
         expect(getActiveScheduledMaintenances.mock.calls.length).toBe(fetchCount);
     });
 
+    it('locks on time when a maintenance with no alert buffer is fetched before it starts', async () => {
+        // Apex returns records whose alert window starts soon; the component waits for the window before showing them
+        getActiveScheduledMaintenances.mockResolvedValue([{ ...systemLock(3, 60), Start_Date_with_Buffer__c: minutesFromNow(3) }]);
+        await render();
+        const fetchCount = getActiveScheduledMaintenances.mock.calls.length;
+
+        expect(isModalOpen(element)).toBe(false);
+
+        await advanceMinutes(3.1);
+
+        expect(isLocked(element)).toBe(true);
+        expect(getActiveScheduledMaintenances.mock.calls.length).toBe(fetchCount);
+    });
+
     it('unlocks when the maintenance ends, without waiting for the next fetch', async () => {
         getActiveScheduledMaintenances.mockResolvedValue([systemLock(-60, 2)]);
         await render();

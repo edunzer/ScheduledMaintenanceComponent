@@ -17,6 +17,13 @@ export function isInProgress(record, now) {
     return now >= parseUTCDate(record.Start_Date_Time__c) && now <= parseUTCDate(record.End_Date_Time__c);
 }
 
+// Whether the record's alert window (Start_Date_with_Buffer__c) has started. Apex also returns records whose
+// window starts soon, so the component can show them on time between refreshes.
+export function isAlertWindowOpen(record, now) {
+    const windowStart = parseUTCDate(record.Start_Date_with_Buffer__c);
+    return !windowStart || windowStart <= now;
+}
+
 // Whether the record is a maintenance in progress that can't be dismissed, so it locks its apps.
 export function isLocking(record, now) {
     return isInProgress(record, now) && !record.Dismissible__c;
@@ -97,10 +104,10 @@ export function splitByStatus(records, now) {
     return { inProgress, upcoming };
 }
 
-// Milliseconds until just after the next start or end time among the records, or null if there's none.
+// Milliseconds until just after the next alert window start, start or end time among the records, or null if there's none.
 export function msUntilNextBoundary(records, now) {
     const boundaries = records
-        .flatMap(record => [parseUTCDate(record.Start_Date_Time__c), parseUTCDate(record.End_Date_Time__c)])
+        .flatMap(record => [record.Start_Date_with_Buffer__c, record.Start_Date_Time__c, record.End_Date_Time__c].map(parseUTCDate))
         .filter(date => date && date > now)
         .map(date => date.getTime());
     if (boundaries.length === 0) {
