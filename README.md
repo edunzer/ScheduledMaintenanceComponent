@@ -39,6 +39,16 @@ The component enhances user experience by providing timely alerts and essential 
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
 - **Admin View**: Users with the `Bypass Scheduled Maintenance` custom permission, or the `System Administrator` profile, see a distinct read-only label instead of the maintenance modal and are never locked. This makes it easy to identify the component while editing Lightning pages. Assign the `Scheduled Maintenance Bypass` permission set to anyone else who should bypass the lock, such as admins on cloned profiles.
 
+## Permissions
+
+The component reads maintenance records with the user's own object and field permissions, so assign permission sets as follows:
+
+- **Object - Scheduled Maintenance - Level 1**: read access. Required for every user who sees the component. Without it the component can't load maintenances, and no alert or lock is shown.
+- **Object - Scheduled Maintenance - Level 6**: full access, for people who create and edit maintenance records.
+- **Scheduled Maintenance Bypass**: exempts users from the lock (see Admin View).
+
+Maintenance records are shared org-wide as Public Read Only.
+
 ## Limitations
 
 The System Lock and App Lock are a user-experience control, not access control. The lock is a modal shown by the component, so it only covers pages that include the component, in a browser tab that has loaded it. During a non-dismissible maintenance, users can still:

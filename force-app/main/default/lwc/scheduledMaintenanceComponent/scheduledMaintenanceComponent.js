@@ -71,8 +71,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 this.scheduleNextBoundary(data, now);
             })
             .catch(error => {
-                this.scheduledMaintenances = [];
-                this.isModalOpen = false;
+                // Keep showing what was last loaded, so a temporary error doesn't lift an active lock
+                console.error('Error fetching scheduled maintenances:', error);
             });
     }
 
