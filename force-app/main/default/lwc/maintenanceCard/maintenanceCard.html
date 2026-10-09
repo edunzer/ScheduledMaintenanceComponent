@@ -1,7 +1,7 @@
 <template>
     <article class="slds-box slds-box_small slds-var-m-bottom_small">
         <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-start slds-gutters_x-small">
-            <h3 class="slds-col slds-text-heading_small">{maintenance.Subject}</h3>
+            <h3 class="slds-col slds-text-heading_small card-title">{maintenance.Subject}</h3>
             <template lwc:if={maintenance.lockLabel}>
                 <div class="slds-col slds-no-flex">
                     <lightning-badge label={maintenance.lockLabel} icon-name="utility:lock" class={lockBadgeClass}></lightning-badge>
