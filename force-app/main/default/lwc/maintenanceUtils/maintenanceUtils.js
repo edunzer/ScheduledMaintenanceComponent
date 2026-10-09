@@ -1,0 +1,164 @@
+// Pure logic for the Scheduled Maintenance component: which alerts show, locks, frequencies, ordering and
+// date formatting. Every function takes the current time as `now` so it can be tested with fixed dates.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+// setTimeout can't wait longer than this (~24.8 days)
+const MAX_TIMEOUT_MS = 2147483647;
+
+// Parses an ISO 8601 date string (Apex sends UTC with a Z suffix). Dates are returned as is.
+export function parseUTCDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    return new Date(value);
+}
+
+// Whether the maintenance window contains `now` (start and end included).
+export function isInProgress(record, now) {
+    return now >= parseUTCDate(record.Start_Date_Time__c) && now <= parseUTCDate(record.End_Date_Time__c);
+}
+
+// Whether the record is a maintenance in progress that can't be dismissed, so it locks its apps.
+export function isLocking(record, now) {
+    return isInProgress(record, now) && !record.Dismissible__c;
+}
+
+// The record's Applicable Apps values as a list.
+export function getAppBadges(record) {
+    if (!record.Applicable_Apps__c) return [];
+    return record.Applicable_Apps__c.split(';').map(app => app.trim()).filter(app => !!app);
+}
+
+function appliesToSystem(record) {
+    return getAppBadges(record).includes('System');
+}
+
+// A System maintenance that can't be dismissed is in progress: everything is locked.
+export function hasFullLock(records, now) {
+    return records.some(record => appliesToSystem(record) && isLocking(record, now));
+}
+
+// The alert can be dismissed unless a maintenance that can't be dismissed is in progress.
+export function canDismiss(records, now) {
+    return !records.some(record => isLocking(record, now));
+}
+
+// Formats a date as YYYY-MM-DD in the given time zone, for comparing calendar days.
+export function toLocalDateKey(date, timeZone) {
+    const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+    try {
+        return new Intl.DateTimeFormat('en-CA', { ...dateOptions, timeZone }).format(date);
+    } catch (e) {
+        // Unrecognized time zone: fall back to the browser's
+        return new Intl.DateTimeFormat('en-CA', dateOptions).format(date);
+    }
+}
+
+// Whether a dismissed alert should show again, based on its Alert Frequency:
+//  - Every Visit: on the next page load, so not if it was dismissed during this visit
+//  - Daily: on the next calendar day in the user's time zone
+//  - Weekly: 7 days after the dismissal
+export function frequencyAllowsAlert(frequency, lastDismissed, now, { timeZone, dismissedThisVisit = false } = {}) {
+    switch (frequency) {
+        case 'Every Visit':
+            return !dismissedThisVisit;
+        case 'Daily':
+            return !lastDismissed || toLocalDateKey(lastDismissed, timeZone) !== toLocalDateKey(now, timeZone);
+        case 'Weekly':
+            return !lastDismissed || now - lastDismissed >= 7 * DAY_MS;
+        default:
+            return true;
+    }
+}
+
+// Whether to show the alert for a record: always while it locks, otherwise unless the user dismissed it and
+// its frequency says not to show it again yet. `dismissals` is the stored list of { recordId, dismissedAt }.
+export function shouldShowAlert(record, now, { dismissals = [], dismissedThisVisit = new Set(), timeZone } = {}) {
+    if (isLocking(record, now)) {
+        return true;
+    }
+    const dismissal = dismissals.find(item => item.recordId === record.Id);
+    const lastDismissed = dismissal ? parseUTCDate(dismissal.dismissedAt) : null;
+    return (
+        !lastDismissed ||
+        frequencyAllowsAlert(record.Alert_Frequency__c, lastDismissed, now, {
+            timeZone,
+            dismissedThisVisit: dismissedThisVisit.has(record.Id)
+        })
+    );
+}
+
+// Splits records into in progress and upcoming. In progress lists System locks first; both are then
+// ordered by start time.
+export function splitByStatus(records, now) {
+    const byStart = (a, b) => parseUTCDate(a.Start_Date_Time__c) - parseUTCDate(b.Start_Date_Time__c);
+    const systemLockFirst = (a, b) => (appliesToSystem(b) && !b.Dismissible__c) - (appliesToSystem(a) && !a.Dismissible__c);
+    const inProgress = records.filter(record => isInProgress(record, now)).sort((a, b) => systemLockFirst(a, b) || byStart(a, b));
+    const upcoming = records.filter(record => now < parseUTCDate(record.Start_Date_Time__c)).sort(byStart);
+    return { inProgress, upcoming };
+}
+
+// Milliseconds until just after the next start or end time among the records, or null if there's none.
+export function msUntilNextBoundary(records, now) {
+    const boundaries = records
+        .flatMap(record => [parseUTCDate(record.Start_Date_Time__c), parseUTCDate(record.End_Date_Time__c)])
+        .filter(date => date && date > now)
+        .map(date => date.getTime());
+    if (boundaries.length === 0) {
+        return null;
+    }
+    // Just after the boundary so the start/end comparisons have flipped. Capped at setTimeout's limit;
+    // firing early just re-evaluates and reschedules.
+    return Math.min(Math.min(...boundaries) - now.getTime() + 1000, MAX_TIMEOUT_MS);
+}
+
+// Formats a date and time for display in the user's locale and time zone.
+export function formatDateTime(value, locale, timeZone) {
+    if (!value) return '';
+    const date = parseUTCDate(value);
+    // Keep only the language and region (e.g. de_DE_EURO -> de-DE); Intl rejects Salesforce's extra variants
+    const safeLocale = typeof locale === 'string' ? locale.split(/[_-]/).slice(0, 2).join('-') : locale;
+    // The locale decides between 12- and 24-hour time
+    const options = {
+        year: '2-digit', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+        timeZone
+    };
+    try {
+        return date.toLocaleString(safeLocale, options);
+    } catch (e) {
+        // fallback to default locale
+        return date.toLocaleString(undefined, options);
+    }
+}
+
+// Adds the fields the maintenance cards display: formatted times, subject, lock badge label and app badges.
+export function toDisplayRecord(record, locale, timeZone) {
+    const appBadges = getAppBadges(record);
+    let badgeLabel = '';
+    if (!record.Dismissible__c) {
+        badgeLabel = appBadges.includes('System') ? 'Requires System Lock' : 'Requires App Lock';
+    }
+    return {
+        ...record,
+        startDisplay: formatDateTime(record.Start_Date_Time__c, locale, timeZone),
+        endDisplay: formatDateTime(record.End_Date_Time__c, locale, timeZone),
+        Subject: record.Subject__c,
+        BadgeLabel: badgeLabel,
+        appBadges
+    };
+}
+
+// Records a dismissal at `now` for each record ID, replacing any earlier one for the same record.
+export function addDismissals(dismissals, recordIds, now) {
+    const dismissedAt = now.toISOString();
+    return [
+        ...dismissals.filter(item => !recordIds.includes(item.recordId)),
+        ...recordIds.map(recordId => ({ recordId, dismissedAt }))
+    ];
+}
+
+// Drops dismissals older than the retention period.
+export function pruneDismissals(dismissals, now, retentionMs) {
+    const cutoff = now.getTime() - retentionMs;
+    return dismissals.filter(item => parseUTCDate(item.dismissedAt).getTime() >= cutoff);
+}
