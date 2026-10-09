@@ -8,7 +8,9 @@
     </template>
     <!-- Non-admin view: show modal as normal -->
     <template lwc:elseif={isModalOpen}>
-        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+        <!-- Focus guards keep Tab and Shift+Tab inside the dialog -->
+        <div tabindex="0" aria-hidden="true" onfocus={handleFocusStartGuard}></div>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading" aria-describedby="modal-content" class="slds-modal slds-fade-in-open" onkeydown={handleDialogKeyDown}>
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <template lwc:if={isDismissible}>
@@ -17,7 +19,7 @@
                             <span class="slds-assistive-text">Close</span>
                         </button>
                     </template>
-                    <h2 class="slds-text-heading_large">{modalTitle}</h2>
+                    <h2 id="modal-heading" class="slds-text-heading_large">{modalTitle}</h2>
                     <template lwc:if={isAppClosed}>
                         <div class="slds-m-top_large">
                             <lightning-badge label="This App is Closed" class="slds-m-left_medium slds-badge slds-theme_warning"></lightning-badge>
@@ -25,7 +27,7 @@
                         <p class="slds-m-top_x-small">To see why this app is closed please review the below items.</p>
                     </template>
                 </header>
-                <div class="slds-modal__content slds-p-around_medium modal-content">
+                <div id="modal-content" class="slds-modal__content slds-p-around_medium modal-content">
                     <!-- While a maintenance is in progress: 'In Progress' and 'Upcoming' accordion sections -->
                     <template lwc:if={isInMaintenance}>
                         <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>
@@ -62,6 +64,7 @@
                 </footer>
             </div>
         </section>
+        <div tabindex="0" aria-hidden="true" onfocus={handleFocusEndGuard}></div>
         <div class="slds-backdrop slds-backdrop_open"></div>
     </template>
 </template>
