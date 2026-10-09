@@ -43,3 +43,6 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
+
+# Unmanaged package build output (see README: Releasing a new package version)
+.package-build/
