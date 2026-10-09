@@ -44,7 +44,7 @@ describe('c-scheduled-maintenance-component admin view with the bypass permissio
         document.body.appendChild(element);
         await flushPromises();
         return {
-            adminView: element.shadowRoot.textContent.includes('(Admin View)'),
+            adminView: element.shadowRoot.querySelector('.admin-status') !== null,
             modal: element.shadowRoot.querySelector('section.slds-modal') !== null
         };
     }

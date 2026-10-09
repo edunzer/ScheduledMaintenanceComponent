@@ -1,13 +1,26 @@
 <!-- sldsValidatorIgnore -->
 <template>
-    <!-- Admin view: show only the component name, no modal -->
+    <!-- Admins and bypass users: a status line instead of the alerts, with a preview of what users see -->
     <template lwc:if={isAdmin}>
-        <div class="slds-box slds-theme_default slds-align_absolute-center admin-view">
-            <span class="slds-text-title_caps admin-view__label">Scheduled Maintenance Component (Admin View)</span>
+        <div class="slds-scoped-notification slds-scoped-notification_light admin-status" role="status">
+            <div class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="utility:info" size="x-small" alternative-text="Scheduled maintenance"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <p>
+                        {adminStatus}
+                        <span class="slds-text-color_weak"> You're exempt from maintenance locks.</span>
+                        <template lwc:if={canPreview}>
+                            <button class="slds-button slds-m-left_x-small" onclick={openPreview}>Preview</button>
+                        </template>
+                    </p>
+                </div>
+            </div>
         </div>
     </template>
     <!-- Banner style: a dismissible alert shown in the component's place on the page -->
-    <template lwc:elseif={showBanner}>
+    <template lwc:if={showBanner}>
         <div class={bannerClass} role="status">
             <lightning-icon icon-name={bannerIcon} size="x-small" variant={bannerIconVariant} alternative-text="Scheduled maintenance" class="slds-m-right_x-small"></lightning-icon>
             <h2>
@@ -21,15 +34,15 @@
             </div>
         </div>
     </template>
-    <!-- Dialog: locks, and dismissible alerts unless they use the banner -->
+    <!-- Dialog: locks, dismissible alerts unless they use the banner, and admin previews -->
     <template lwc:elseif={showDialog}>
         <!-- Focus guards keep Tab and Shift+Tab inside the dialog -->
         <div tabindex="0" aria-hidden="true" onfocus={handleFocusStartGuard}></div>
         <section role={dialogRole} tabindex="-1" aria-modal="true" aria-labelledby="modal-heading" aria-describedby="modal-content" class="slds-modal slds-fade-in-open" onkeydown={handleDialogKeyDown}>
             <div class="slds-modal__container">
                 <header class={headerClass}>
-                    <template lwc:if={isDismissible}>
-                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={dismissAllRecords}>
+                    <template lwc:if={showCloseButton}>
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleClose}>
                             <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
                             <span class="slds-assistive-text">Close</span>
                         </button>
@@ -60,7 +73,11 @@
                 </div>
                 <template lwc:if={hasFooterButtons}>
                     <footer class="slds-modal__footer">
-                        <template lwc:if={isDismissible}>
+                        <template lwc:if={previewOpen}>
+                            <span class="slds-float_left slds-text-color_weak slds-p-top_xx-small">Preview of what users see</span>
+                            <lightning-button variant="neutral" label="Close preview" title="Close preview" onclick={closePreview}></lightning-button>
+                        </template>
+                        <template lwc:elseif={isDismissible}>
                             <lightning-button variant="neutral" label="Dismiss" title="Dismiss" onclick={dismissAllRecords}></lightning-button>
                         </template>
                         <template lwc:elseif={showExitButton}>

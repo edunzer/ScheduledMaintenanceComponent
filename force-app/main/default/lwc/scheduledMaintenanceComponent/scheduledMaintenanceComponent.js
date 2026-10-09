@@ -49,6 +49,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     @api alertStyle = 'Dialog';
     // Whether the user opened the dialog from the banner's "View details" link
     detailsOpen = false;
+    // Whether an admin is previewing the dialog users see
+    previewOpen = false;
     // The user's Salesforce time zone and locale, available without an Apex call
     userTimeZone = timeZone;
     userLocale = locale;
@@ -103,9 +105,9 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
 
     // Escape closes the dialog, but only when the alert can be dismissed.
     handleDialogKeyDown(event) {
-        if (event.key === 'Escape' && this.isDismissible) {
+        if (event.key === 'Escape' && this.showCloseButton) {
             event.stopPropagation();
-            this.dismissAllRecords();
+            this.handleClose();
         }
     }
 
@@ -164,11 +166,45 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     }
 
     // With the Banner style, dismissible alerts show as a banner until the user opens the details.
+    // Admins see a status line instead, and the dialog only when they preview it.
     get showBanner() {
-        return this.isModalOpen && this.isDismissible && this.alertStyle === 'Banner' && !this.detailsOpen;
+        return !this.isAdmin && this.isModalOpen && this.isDismissible && this.alertStyle === 'Banner' && !this.detailsOpen;
     }
     get showDialog() {
-        return this.isModalOpen && !this.showBanner;
+        return this.isAdmin ? this.previewOpen : this.isModalOpen && !this.showBanner;
+    }
+
+    // The admin status line, e.g. "Scheduled maintenance: CRM is unavailable until Wed, Mar 18, 4:00 PM PDT."
+    get adminStatus() {
+        if (this.lockSummary) {
+            return `Scheduled maintenance: ${this.lockSummary}`;
+        }
+        const count = this.scheduledMaintenances.length;
+        if (count === 0) {
+            return 'Scheduled maintenance: nothing to show right now.';
+        }
+        return `Scheduled maintenance: ${count === 1 ? '1 alert is' : `${count} alerts are`} shown to users.`;
+    }
+    get canPreview() {
+        return this.scheduledMaintenances.length > 0;
+    }
+    openPreview() {
+        this.previewOpen = true;
+    }
+    closePreview() {
+        this.previewOpen = false;
+    }
+    // A preview can always be closed; for users, only alerts that can be dismissed can
+    get showCloseButton() {
+        return this.previewOpen || this.isDismissible;
+    }
+    // Closing a preview doesn't record a dismissal
+    handleClose() {
+        if (this.previewOpen) {
+            this.closePreview();
+        } else {
+            this.dismissAllRecords();
+        }
     }
     // Warning colors while a maintenance is in progress, info colors for upcoming ones
     get bannerClass() {
@@ -293,7 +329,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     }
     // A full lock has no buttons, so the footer is left out.
     get hasFooterButtons() {
-        return this.isDismissible || this.showExitButton;
+        return this.previewOpen || this.isDismissible || this.showExitButton;
     }
     // Navigates to another app based on the fetched app ID.
     navigateToApp() {

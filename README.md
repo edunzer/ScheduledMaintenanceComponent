@@ -39,7 +39,7 @@ The component enhances user experience by providing timely alerts and essential 
 - **Adaptive Titles**: Updates the title of the modal based on the current maintenance status.
 - **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
-- **Admin View**: Users with the `Bypass Scheduled Maintenance` custom permission, or the `System Administrator` profile, see a distinct read-only label instead of the maintenance modal and are never locked. This makes it easy to identify the component while editing Lightning pages. Assign the `Scheduled Maintenance Bypass` permission set to anyone else who should bypass the lock, such as admins on cloned profiles.
+- **Admin View**: Users with the `Bypass Scheduled Maintenance` custom permission, or the `System Administrator` profile, see a one-line status instead of the maintenance alerts (for example, which app is locked and until when) and are never locked. Its **Preview** button opens the dialog users see, without locking anything or recording a dismissal. The status line also makes the component easy to find while editing Lightning pages. Assign the `Scheduled Maintenance Bypass` permission set to anyone else who should bypass the lock, such as admins on cloned profiles.
 
 ## Permissions
 
