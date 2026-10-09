@@ -1,5 +1,9 @@
 @IsTest
 public class ScheduledMaintenanceServiceTest {
+    // Time zones on either side of UTC. Time-window tests run as a user in each, so a query that compares
+    // against the user's local time instead of UTC (#52) is shifted by 7+ hours and returns the wrong records.
+    private static final List<String> TEST_TIME_ZONES = new List<String>{'America/Los_Angeles', 'Australia/Brisbane'};
+
     @TestSetup
     static void setup() {        // Create test data for Scheduled_Maintenance__c
         List<Scheduled_Maintenance__c> maintenances = new List<Scheduled_Maintenance__c>();
@@ -89,12 +93,40 @@ public class ScheduledMaintenanceServiceTest {
     }
 
     @IsTest
-    static void testStartBoundaryExcludesFutureMaintenances() {
-        // A record whose Start_Date_with_Buffer__c is in the future (no buffer) must not be returned
+    static void testActiveMaintenanceReturnedInAllTimeZones() {
+        // A record that is currently in its maintenance window must be returned for every user, whatever their time zone
         DateTime now = DateTime.now();
         insert new Scheduled_Maintenance__c(
-            Start_Date_Time__c = now.addDays(1),
-            End_Date_Time__c = now.addDays(2),
+            Start_Date_Time__c = now.addHours(-1),
+            End_Date_Time__c = now.addHours(1),
+            Subject__c = 'Active Maintenance',
+            Description__c = 'In progress',
+            Alert_Frequency__c = 'Daily',
+            Alert_Buffer__c = 0,
+            Dismissible__c = false,
+            Applicable_Apps__c = 'System',
+            Status__c = 'Scheduled'
+        );
+        List<User> users = createTimeZoneUsers();
+
+        Test.startTest();
+        for (User u : users) {
+            Assert.isTrue(
+                getActiveSubjectsAs(u, null).contains('Active Maintenance'),
+                'An in-progress maintenance should be returned for a user in ' + u.TimeZoneSidKey
+            );
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
+    static void testStartBoundaryExcludesFutureMaintenances() {
+        // A record whose Start_Date_with_Buffer__c is in the future (no buffer) must not be returned.
+        // It starts soon but ends much later, so a query shifted ahead by a UTC+ offset would wrongly include it.
+        DateTime now = DateTime.now();
+        insert new Scheduled_Maintenance__c(
+            Start_Date_Time__c = now.addHours(1),
+            End_Date_Time__c = now.addDays(1),
             Subject__c = 'Future Maintenance',
             Description__c = 'Not yet started',
             Alert_Frequency__c = 'Daily',
@@ -103,19 +135,16 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
+        List<User> users = createTimeZoneUsers();
 
         Test.startTest();
-        List<Object> results = ScheduledMaintenanceService.getActiveScheduledMaintenances(null);
-        Test.stopTest();
-
-        for (Object o : results) {
-            Map<String, Object> maint = (Map<String, Object>) o;
-            System.assertNotEquals(
-                'Future Maintenance',
-                maint.get('Subject__c'),
-                'A maintenance whose start is in the future should not be returned'
+        for (User u : users) {
+            Assert.isFalse(
+                getActiveSubjectsAs(u, null).contains('Future Maintenance'),
+                'A maintenance whose start is in the future should not be returned for a user in ' + u.TimeZoneSidKey
             );
         }
+        Test.stopTest();
     }
 
     @IsTest
@@ -133,20 +162,16 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
+        List<User> users = createTimeZoneUsers();
 
         Test.startTest();
-        List<Object> results = ScheduledMaintenanceService.getActiveScheduledMaintenances(null);
-        Test.stopTest();
-
-        // In test context, formula fields may not be calculated. Instead, print debug info.
-        Boolean foundPast = false;
-        for (Object o : results) {
-            Map<String, Object> maint = (Map<String, Object>) o;
-            if ((String)maint.get('Subject__c') == 'Past Maintenance') {
-                foundPast = true;
-            }
+        for (User u : users) {
+            Assert.isFalse(
+                getActiveSubjectsAs(u, null).contains('Past Maintenance'),
+                'A maintenance that has already ended should not be returned for a user in ' + u.TimeZoneSidKey
+            );
         }
-        System.debug('Past Maintenance present in results: ' + foundPast);
+        Test.stopTest();
     }
 
     @IsTest
@@ -165,19 +190,16 @@ public class ScheduledMaintenanceServiceTest {
             Applicable_Apps__c = 'System',
             Status__c = 'Scheduled'
         );
+        List<User> users = createTimeZoneUsers();
 
         Test.startTest();
-        List<Object> results = ScheduledMaintenanceService.getActiveScheduledMaintenances(null);
-        Test.stopTest();
-
-        Boolean found = false;
-        for (Object o : results) {
-            Map<String, Object> maint = (Map<String, Object>) o;
-            if (maint.get('Subject__c') == 'Buffered Maintenance') {
-                found = true;
-            }
+        for (User u : users) {
+            Assert.isTrue(
+                getActiveSubjectsAs(u, null).contains('Buffered Maintenance'),
+                'A maintenance within its alert-buffer window should be returned before its start time for a user in ' + u.TimeZoneSidKey
+            );
         }
-        System.assert(found, 'A maintenance within its alert-buffer window should be returned before its start time');
+        Test.stopTest();
     }
 
     @IsTest
@@ -232,8 +254,7 @@ public class ScheduledMaintenanceServiceTest {
         List<Object> results = ScheduledMaintenanceService.getActiveScheduledMaintenances('CRM');
         Test.stopTest();
 
-        // 3 new CRM records + 1 System record from @TestSetup (Subject 4, active)
-        // In test context, formula fields may not be calculated. Instead, print debug info.
+        // 4 new CRM records + 1 active CRM record from @TestSetup (Subject CRM)
         Integer crmCount = 0;
         for (Object o : results) {
             Map<String, Object> maint = (Map<String, Object>)o;
@@ -241,7 +262,7 @@ public class ScheduledMaintenanceServiceTest {
                 crmCount++;
             }
         }
-        System.debug('CRM maintenance records returned: ' + crmCount);
+        Assert.areEqual(5, crmCount, 'All active, overlapping CRM maintenance windows should be returned together');
     }
 
     @IsTest
@@ -278,14 +299,8 @@ public class ScheduledMaintenanceServiceTest {
                 foundInPSA = true;
             }
         }
-        // If either fails, print debug info for troubleshooting
-        if (!foundInCRM || !foundInPSA) {
-            System.debug('crmResults: ' + crmResults);
-            System.debug('psaResults: ' + psaResults);
-        }
-        // In test context, multi-picklist INCLUDES may not work. Print debug info instead.
-        System.debug('Multi-App Maintenance found in CRM results: ' + foundInCRM);
-        System.debug('Multi-App Maintenance found in PSA results: ' + foundInPSA);
+        Assert.isTrue(foundInCRM, 'A CRM;PSA maintenance should be returned for the CRM app: ' + crmResults);
+        Assert.isTrue(foundInPSA, 'A CRM;PSA maintenance should be returned for the PSA app: ' + psaResults);
     }
 
     @IsTest
@@ -330,5 +345,70 @@ public class ScheduledMaintenanceServiceTest {
         System.assertEquals(null, appId, 'App ID should be null for non-existent developer name');
 
         Test.stopTest();
+    }
+
+    @IsTest
+    static void testGetUserLocaleInfo() {
+        User u = buildUser('Australia/Brisbane');
+        u.LocaleSidKey = 'en_AU';
+        insert u;
+
+        Map<String, Object> info;
+        Test.startTest();
+        System.runAs(u) {
+            info = ScheduledMaintenanceService.getUserLocaleInfo();
+        }
+        Test.stopTest();
+
+        Assert.areEqual('Australia/Brisbane', info.get('timeZone'), 'Should return the running user\'s time zone');
+        Assert.areEqual('en_AU', info.get('locale'), 'Should return the running user\'s locale');
+    }
+
+    @IsTest
+    static void testGetUserProfileName() {
+        String expected = [SELECT Name FROM Profile WHERE Id = :UserInfo.getProfileId()].Name;
+
+        Test.startTest();
+        String profileName = ScheduledMaintenanceService.getUserProfileName();
+        Test.stopTest();
+
+        Assert.areEqual(expected, profileName, 'Should return the running user\'s profile name');
+    }
+
+    // Builds (but does not insert) a user in the given time zone with the running user's profile.
+    private static User buildUser(String timeZone) {
+        String uniqueKey = String.valueOf(Math.abs(Crypto.getRandomLong()));
+        return new User(
+            ProfileId = UserInfo.getProfileId(),
+            Username = 'scheduledmaint.' + uniqueKey + '@example.com',
+            Email = 'scheduledmaint.' + uniqueKey + '@example.com',
+            LastName = 'Maintenance Test',
+            Alias = uniqueKey.left(8),
+            TimeZoneSidKey = timeZone,
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            LanguageLocaleKey = 'en_US'
+        );
+    }
+
+    // Inserts one user for each of TEST_TIME_ZONES.
+    private static List<User> createTimeZoneUsers() {
+        List<User> users = new List<User>();
+        for (String timeZone : TEST_TIME_ZONES) {
+            users.add(buildUser(timeZone));
+        }
+        insert users;
+        return users;
+    }
+
+    // Returns the subjects of the active maintenances returned when the given user calls the service.
+    private static Set<String> getActiveSubjectsAs(User u, String appContext) {
+        Set<String> subjects = new Set<String>();
+        System.runAs(u) {
+            for (Object o : ScheduledMaintenanceService.getActiveScheduledMaintenances(appContext)) {
+                subjects.add((String) ((Map<String, Object>) o).get('Subject__c'));
+            }
+        }
+        return subjects;
     }
 }
