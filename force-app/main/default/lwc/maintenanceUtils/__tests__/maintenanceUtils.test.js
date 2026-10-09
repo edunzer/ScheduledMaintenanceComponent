@@ -1,7 +1,7 @@
 import {
     addDismissals,
     canDismiss,
-    formatDateTime,
+    formatDateRange,
     formatMoment,
     frequencyAllowsAlert,
     getAppBadges,
@@ -205,18 +205,19 @@ describe('msUntilNextBoundary', () => {
     });
 });
 
-describe('formatDateTime', () => {
-    it("formats in the user's locale and time zone", () => {
-        expect(formatDateTime('2026-10-09T17:00:00.000Z', 'en-US', 'America/Los_Angeles')).toMatch(/^10\/09\/26, 10:00\sAM$/);
-        expect(formatDateTime('2026-10-09T17:00:00.000Z', 'en_AU', 'Australia/Brisbane')).toMatch(/^10\/10\/26, 03:00\sam$/i);
+describe('formatDateRange', () => {
+    it("shows one range in the user's locale and time zone", () => {
+        expect(formatDateRange(at(0), at(60), NOW, 'en-US', 'America/Los_Angeles')).toMatch(/^Fri, Oct 9, 10:00\s–\s11:00\sAM PDT$/);
+        expect(formatDateRange(at(-60), at(48 * 60 + 60), NOW, 'en-US', 'UTC')).toMatch(/^Fri, Oct 9, 4:00\sPM UTC\s–\sSun, Oct 11, 6:00\sPM UTC$/);
     });
 
     it('uses 24-hour time where the locale does, even with a Salesforce locale variant', () => {
-        expect(formatDateTime('2026-10-09T17:00:00.000Z', 'de_DE_EURO', 'Europe/Berlin')).toBe('09.10.26, 19:00');
+        expect(formatDateRange(at(0), at(60), NOW, 'de_DE_EURO', 'Europe/Berlin')).toBe('Fr., 9. Okt., 19:00–20:00 Uhr MESZ');
     });
 
-    it('returns an empty string for a blank value', () => {
-        expect(formatDateTime(null, 'en-US', 'UTC')).toBe('');
+    it('shows whichever end is known if one is blank', () => {
+        expect(formatDateRange(null, at(60), NOW, 'en-US', 'UTC')).toMatch(/^Fri, Oct 9, 6:00\sPM UTC$/);
+        expect(formatDateRange(null, null, NOW, 'en-US', 'UTC')).toBe('');
     });
 });
 
@@ -258,13 +259,22 @@ describe('lockSummary', () => {
 });
 
 describe('toDisplayRecord', () => {
-    it('adds display fields and the lock badge label', () => {
-        const display = toDisplayRecord(record({ Dismissible__c: false, Applicable_Apps__c: 'CRM;PSA' }), 'en-US', 'UTC');
+    it('adds the subject, date range and affected apps', () => {
+        const display = toDisplayRecord(record({ Applicable_Apps__c: 'CRM;PSA' }), NOW, 'en-US', 'UTC');
 
-        expect(display).toMatchObject({ Subject: 'Release', BadgeLabel: 'Requires App Lock', appBadges: ['CRM', 'PSA'] });
-        expect(display.startDisplay).toMatch(/^10\/09\/26, 04:00\sPM$/);
-        expect(toDisplayRecord(record({ Dismissible__c: false }), 'en-US', 'UTC').BadgeLabel).toBe('Requires System Lock');
-        expect(toDisplayRecord(record(), 'en-US', 'UTC').BadgeLabel).toBe('');
+        expect(display).toMatchObject({ Subject: 'Release', affects: 'CRM, PSA', lockLabel: '', lockActive: false, appBadges: ['CRM', 'PSA'] });
+        expect(display.dateRange).toMatch(/^Fri, Oct 9, 4:00\s–\s6:00\sPM UTC$/);
+        expect(toDisplayRecord(record(), NOW, 'en-US', 'UTC').affects).toBe('All apps');
+    });
+
+    it('labels locks in plain language: "Locks" while in progress, "Will lock" before', () => {
+        const appLock = { Dismissible__c: false, Applicable_Apps__c: 'CRM;PSA' };
+        expect(toDisplayRecord(record(appLock), NOW, 'en-US', 'UTC')).toMatchObject({ lockLabel: 'Locks CRM, PSA', lockActive: true });
+        expect(toDisplayRecord(record({ ...appLock, Start_Date_Time__c: at(30) }), NOW, 'en-US', 'UTC')).toMatchObject({
+            lockLabel: 'Will lock CRM, PSA',
+            lockActive: false
+        });
+        expect(toDisplayRecord(record({ Dismissible__c: false }), NOW, 'en-US', 'UTC').lockLabel).toBe('Locks all apps');
     });
 });
 

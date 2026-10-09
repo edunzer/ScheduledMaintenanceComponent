@@ -1,15 +1,12 @@
 import { LightningElement, api } from 'lwc';
 
-// One maintenance in the Scheduled Maintenance modal: subject, description, times, lock badge and applicable apps.
+// One maintenance in the Scheduled Maintenance modal: subject, lock badge, date range, description and affected apps.
 export default class MaintenanceCard extends LightningElement {
-    // A record prepared by scheduledMaintenanceComponent, with Subject, startDisplay, endDisplay, BadgeLabel and appBadges
+    // A record prepared by maintenanceUtils.toDisplayRecord, with Subject, dateRange, affects, lockLabel and lockActive
     @api maintenance;
 
-    get showLockBadge() {
-        return !this.maintenance.Dismissible__c;
-    }
-
-    get hasAppBadges() {
-        return Array.isArray(this.maintenance.appBadges) && this.maintenance.appBadges.length > 0;
+    // Orange while the maintenance locks; neutral for one that will lock later
+    get lockBadgeClass() {
+        return this.maintenance.lockActive ? 'slds-theme_warning' : '';
     }
 }

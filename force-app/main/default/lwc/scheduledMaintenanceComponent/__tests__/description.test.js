@@ -44,17 +44,17 @@ describe('c-scheduled-maintenance-component description', () => {
         jest.clearAllMocks();
     });
 
-    // The In Progress / Upcoming accordion and the reminder view (nothing in progress) render cards separately
+    // Reminders on their own, and the "Happening now" / "Coming up" groups
     it.each([
         ['reminder view', [maintenance('a01', 1, 2)]],
-        ['In Progress and Upcoming sections', [maintenance('a01', -1, 1), maintenance('a02', 1, 2)]]
+        ['Happening now and Coming up groups', [maintenance('a01', -1, 1), maintenance('a02', 1, 2)]]
     ])('keeps line breaks in descriptions in the %s', async (view, records) => {
         getActiveScheduledMaintenances.mockResolvedValue(records);
         const element = createElement('c-scheduled-maintenance-component', { is: ScheduledMaintenanceComponent });
         document.body.appendChild(element);
         await flushPromises();
 
-        const descriptions = cardParagraphs(element).filter((p) => p.textContent.startsWith('Description:'));
+        const descriptions = cardParagraphs(element).filter((p) => p.textContent === 'Line one\nLine two');
         expect(descriptions).toHaveLength(records.length);
         descriptions.forEach((p) => expect(p.classList).toContain('multi-line'));
     });

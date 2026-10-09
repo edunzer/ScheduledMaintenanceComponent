@@ -29,30 +29,18 @@
                     </template>
                 </header>
                 <div id="modal-content" class="slds-modal__content slds-p-around_medium modal-content">
-                    <!-- While a maintenance is in progress: 'In Progress' and 'Upcoming' accordion sections -->
-                    <template lwc:if={isInMaintenance}>
-                        <lightning-accordion allow-multiple-sections-open active-section-name={activeSectionName}>
-                            <template lwc:if={inProgressMaintenances.length}>
-                                <lightning-accordion-section name="inProgress" label="In Progress">
-                                    <template for:each={inProgressMaintenances} for:item="maint">
-                                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
-                                    </template>
-                                </lightning-accordion-section>
-                            </template>
-                            <template lwc:if={upcomingMaintenances.length}>
-                                <lightning-accordion-section name="upcoming" label="Upcoming">
-                                    <template for:each={upcomingMaintenances} for:item="maint">
-                                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
-                                    </template>
-                                </lightning-accordion-section>
-                            </template>
-                        </lightning-accordion>
+                    <!-- In-progress maintenances first, then upcoming ones; headings only when there are both -->
+                    <template lwc:if={showSectionHeadings}>
+                        <h2 class="slds-text-title_caps slds-m-bottom_x-small">Happening now</h2>
                     </template>
-                    <!-- Otherwise a list of reminders -->
-                    <template lwc:else>
-                        <template for:each={scheduledMaintenances} for:item="maint">
-                            <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
-                        </template>
+                    <template for:each={inProgressMaintenances} for:item="maint">
+                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
+                    </template>
+                    <template lwc:if={showSectionHeadings}>
+                        <h2 class="slds-text-title_caps slds-m-top_medium slds-m-bottom_x-small">Coming up</h2>
+                    </template>
+                    <template for:each={upcomingMaintenances} for:item="maint">
+                        <c-maintenance-card key={maint.Id} maintenance={maint}></c-maintenance-card>
                     </template>
                 </div>
                 <template lwc:if={hasFooterButtons}>

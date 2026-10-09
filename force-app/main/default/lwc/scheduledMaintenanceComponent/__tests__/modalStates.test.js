@@ -113,6 +113,19 @@ describe('c-scheduled-maintenance-component modal states', () => {
         expect(element.shadowRoot.querySelector('.lock-summary')).toBeNull();
     });
 
+    it('groups maintenances under "Happening now" and "Coming up" only when there are both', async () => {
+        const headings = (element) => Array.from(element.shadowRoot.querySelectorAll('.slds-modal__content h2')).map((h) => h.textContent);
+        const inProgress = maintenance({ Id: 'a01' });
+        const upcoming = maintenance({ Id: 'a02', Start_Date_Time__c: minutesFromNow(60), End_Date_Time__c: minutesFromNow(120) });
+
+        const both = await render([inProgress, upcoming]);
+        expect(headings(both)).toEqual(['Happening now', 'Coming up']);
+        expect(both.shadowRoot.querySelectorAll('c-maintenance-card')).toHaveLength(2);
+        document.body.removeChild(both);
+
+        expect(headings(await render([upcoming]))).toEqual([]);
+    });
+
     it('stays closed when there is nothing to show', async () => {
         const element = await render([]);
 

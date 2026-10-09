@@ -1,23 +1,19 @@
 <template>
-    <div class="slds-box slds-theme_default slds-var-m-bottom_small">
-        <h2 class="slds-text-heading_small slds-var-m-bottom_small"><strong>{maintenance.Subject}</strong></h2>
-        <p class="slds-p-bottom_small multi-line"><strong>Description:</strong> {maintenance.Description__c}</p>
-        <p><strong>Start:</strong> {maintenance.startDisplay}</p>
-        <p><strong>End:</strong> {maintenance.endDisplay}</p>
-        <template lwc:if={showLockBadge}>
-            <lightning-badge label={maintenance.BadgeLabel} class="slds-m-left_xx-small slds-m-top_x-small slds-theme_warning"></lightning-badge>
-        </template>
-        <template lwc:if={hasAppBadges}>
-            <div class="slds-m-top_x-small">
-                <div class="slds-box slds-theme_shade slds-p-around_small slds-m-bottom_xx-small">
-                    <div class="slds-text-title_caps slds-m-bottom_x-small">Applicable Apps</div>
-                    <div class="slds-grid slds-wrap slds-gutters_xx-small">
-                        <template for:each={maintenance.appBadges} for:item="app">
-                            <span key={app} class="slds-badge slds-badge_lightest">{app}</span>
-                        </template>
-                    </div>
+    <article class="slds-box slds-box_small slds-var-m-bottom_small">
+        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-start slds-gutters_x-small">
+            <h3 class="slds-col slds-text-heading_small">{maintenance.Subject}</h3>
+            <template lwc:if={maintenance.lockLabel}>
+                <div class="slds-col slds-no-flex">
+                    <lightning-badge label={maintenance.lockLabel} icon-name="utility:lock" class={lockBadgeClass}></lightning-badge>
                 </div>
-            </div>
+            </template>
+        </div>
+        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small date-range">{maintenance.dateRange}</p>
+        <template lwc:if={maintenance.Description__c}>
+            <p class="slds-m-top_x-small multi-line">{maintenance.Description__c}</p>
         </template>
-    </div>
+        <p class="slds-text-body_small slds-m-top_x-small affects">
+            <span class="slds-text-color_weak">Affects:</span> {maintenance.affects}
+        </p>
+    </article>
 </template>

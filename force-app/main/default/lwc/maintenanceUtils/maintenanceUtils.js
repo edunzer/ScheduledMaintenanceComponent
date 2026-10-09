@@ -118,26 +118,6 @@ export function msUntilNextBoundary(records, now) {
     return Math.min(Math.min(...boundaries) - now.getTime() + 1000, MAX_TIMEOUT_MS);
 }
 
-// Formats a date and time for display in the user's locale and time zone.
-export function formatDateTime(value, locale, timeZone) {
-    if (!value) return '';
-    const date = parseUTCDate(value);
-    // Keep only the language and region (e.g. de_DE_EURO -> de-DE); Intl rejects Salesforce's extra variants
-    const safeLocale = typeof locale === 'string' ? locale.split(/[_-]/).slice(0, 2).join('-') : locale;
-    // The locale decides between 12- and 24-hour time
-    const options = {
-        year: '2-digit', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit',
-        timeZone
-    };
-    try {
-        return date.toLocaleString(safeLocale, options);
-    } catch (e) {
-        // fallback to default locale
-        return date.toLocaleString(undefined, options);
-    }
-}
-
 // The year of a date in the given time zone.
 function yearIn(date, timeZone) {
     try {
@@ -173,6 +153,20 @@ export function formatMoment(value, now, locale, timeZone) {
     return date ? dateTimeFormatter([date], now, locale, timeZone).format(date) : '';
 }
 
+// Formats a maintenance window as one range, e.g. "Mon, Mar 16, 4:00 – 6:00 PM PDT" or
+// "Mon, Mar 16, 4:00 PM PDT – Wed, Mar 18, 4:00 PM PDT".
+export function formatDateRange(startValue, endValue, now, locale, timeZone) {
+    const start = parseUTCDate(startValue);
+    const end = parseUTCDate(endValue);
+    if (!start || !end) {
+        return formatMoment(start || end, now, locale, timeZone);
+    }
+    const formatter = dateTimeFormatter([start, end], now, locale, timeZone);
+    return typeof formatter.formatRange === 'function'
+        ? formatter.formatRange(start, end)
+        : `${formatter.format(start)} – ${formatter.format(end)}`;
+}
+
 // Says what's locked and until when, e.g. "CRM is unavailable until Wed, Mar 18, 4:00 PM PDT.", or '' if nothing is.
 export function lockSummary(records, now, { appContext, locale, timeZone } = {}) {
     const locking = records.filter(record => isLocking(record, now));
@@ -189,19 +183,25 @@ export function lockSummary(records, now, { appContext, locale, timeZone } = {})
     return `${what} unavailable until ${formatMoment(lockEnd, now, locale, timeZone)}.`;
 }
 
-// Adds the fields the maintenance cards display: formatted times, subject, lock badge label and app badges.
-export function toDisplayRecord(record, locale, timeZone) {
+// Adds the fields the maintenance cards display: subject, date range, affected apps and lock badge.
+//  - affects: "CRM, PSA", or "All apps" for System maintenances
+//  - lockLabel: "Locks CRM" while a maintenance that can't be dismissed is in progress, "Will lock CRM" before it
+//    starts, or '' for a dismissible one; lockActive is true while it locks
+export function toDisplayRecord(record, now, locale, timeZone) {
     const appBadges = getAppBadges(record);
-    let badgeLabel = '';
+    const affects = appBadges.includes('System') ? 'All apps' : appBadges.join(', ');
+    let lockLabel = '';
     if (!record.Dismissible__c) {
-        badgeLabel = appBadges.includes('System') ? 'Requires System Lock' : 'Requires App Lock';
+        const lockedApps = appBadges.includes('System') ? 'all apps' : affects;
+        lockLabel = isInProgress(record, now) ? `Locks ${lockedApps}` : `Will lock ${lockedApps}`;
     }
     return {
         ...record,
-        startDisplay: formatDateTime(record.Start_Date_Time__c, locale, timeZone),
-        endDisplay: formatDateTime(record.End_Date_Time__c, locale, timeZone),
         Subject: record.Subject__c,
-        BadgeLabel: badgeLabel,
+        dateRange: formatDateRange(record.Start_Date_Time__c, record.End_Date_Time__c, now, locale, timeZone),
+        affects,
+        lockLabel,
+        lockActive: isLocking(record, now),
         appBadges
     };
 }

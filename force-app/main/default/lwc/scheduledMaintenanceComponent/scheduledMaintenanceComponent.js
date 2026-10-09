@@ -45,7 +45,6 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     @api reminderTitle = 'Scheduled Maintenance Reminder';
     @api currentAppContext;
     @api exitAppDeveloperName = 'Welcome';
-    activeSectionName = '';
     // The user's Salesforce time zone and locale, available without an Apex call
     userTimeZone = timeZone;
     userLocale = locale;
@@ -143,22 +142,12 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             // Records fetched ahead of their alert window are shown once it starts
             .filter(record => isAlertWindowOpen(record, now))
             .filter(record => shouldShowAlert(record, now, { dismissals, dismissedThisVisit: this.dismissedThisVisit, timeZone: userTimeZone }))
-            .map(record => toDisplayRecord(record, userLocale, userTimeZone));
+            .map(record => toDisplayRecord(record, now, userLocale, userTimeZone));
         const { inProgress, upcoming } = splitByStatus(allRecords, now);
 
         this.inProgressMaintenances = inProgress;
         this.upcomingMaintenances = upcoming;
         this.scheduledMaintenances = allRecords;
-
-        // Set active section logic
-        if (inProgress.length > 0) {
-            this.activeSectionName = 'inProgress';
-        } else if (upcoming.length > 0) {
-            this.activeSectionName = 'upcoming';
-        } else {
-            this.activeSectionName = '';
-        }
-
         this.isFullLock = hasFullLock(allRecords, now);
         this.lockSummary = lockSummary(allRecords, now, { appContext: this.currentAppContext, locale: userLocale, timeZone: userTimeZone });
         this.isDismissible = canDismiss(allRecords, now);
@@ -168,6 +157,11 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     // Whether any shown maintenance is in progress; recalculated whenever the records are re-evaluated.
     get isInMaintenance() {
         return this.inProgressMaintenances.length > 0;
+    }
+
+    // "Happening now" / "Coming up" headings are only needed when there are both.
+    get showSectionHeadings() {
+        return this.inProgressMaintenances.length > 0 && this.upcomingMaintenances.length > 0;
     }
 
     // The configured alert title while a maintenance is in progress, otherwise the reminder title.
