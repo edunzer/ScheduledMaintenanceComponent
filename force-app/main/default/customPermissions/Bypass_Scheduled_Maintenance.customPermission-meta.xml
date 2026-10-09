@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Exempts the user from the Scheduled Maintenance lock. They see the component&apos;s admin view instead of maintenance alerts.</description>
+    <isLicensed>false</isLicensed>
+    <label>Bypass Scheduled Maintenance</label>
+</CustomPermission>
