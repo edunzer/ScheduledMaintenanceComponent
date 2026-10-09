@@ -118,7 +118,9 @@
                 <footer class="slds-modal__footer">
                     <template if:false={isDismissible}>
                         <template if:false={isFullLock}>
-                            <lightning-button variant="neutral" label="Navigate to Welcome App" title="Navigate to Welcome App" onclick={navigateToApp}></lightning-button>
+                            <template if:true={showExitButton}>
+                                <lightning-button variant="neutral" label={exitButtonLabel} title={exitButtonLabel} onclick={navigateToApp}></lightning-button>
+                            </template>
                         </template>
                     </template>
                     <template if:true={isDismissible}>

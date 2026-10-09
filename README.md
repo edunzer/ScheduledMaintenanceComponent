@@ -30,7 +30,7 @@ The component enhances user experience by providing timely alerts and essential 
 - **System and Application Maintenance**:
   - Differentiates between system-wide maintenance and application-specific maintenance.
   - Provides visual cues (e.g., badges) for alerts requiring system or app lock.
-- **User Navigation**: Facilitates navigation to another application based on the fetched App ID.
+- **User Navigation**: When an app is locked, offers a button to navigate to another app, set with the `Exit App Developer Name` property (defaults to `Welcome`). The button is hidden if that app isn't found, and on Experience Cloud sites.
 - **Adaptive Titles**: Updates the title of the modal based on the current maintenance status.
 - **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.

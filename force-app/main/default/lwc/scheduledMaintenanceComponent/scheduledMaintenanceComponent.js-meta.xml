@@ -13,6 +13,7 @@
         <targetConfig targets="lightning__AppPage,lightning__RecordPage,lightning__HomePage,lightningCommunity__Default">
             <property name="title" type="String" default="Scheduled Maintenance Alert" label="Title of the Popup"/>
             <property name="currentAppContext" type="String" label="Current App Context" description="Enter the app context like 'PSA', 'CRM', etc."/>
+            <property name="exitAppDeveloperName" type="String" default="Welcome" label="Exit App Developer Name" description="Developer name of the app users can navigate to when this app is locked. The button is hidden if no app with this name is found. Not used on Experience Cloud sites."/>
         </targetConfig>
     </targetConfigs>
 </LightningComponentBundle>
