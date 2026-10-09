@@ -73,9 +73,10 @@ describe('c-scheduled-maintenance-component alert frequency', () => {
             expect(isModalOpen(element)).toBe(false);
 
             // The next background refresh is 5 minutes later
+            const fetchCount = getActiveScheduledMaintenances.mock.calls.length;
             jest.advanceTimersByTime(5 * 60 * 1000);
             await flushPromises();
-            expect(getActiveScheduledMaintenances.mock.calls.length).toBeGreaterThan(2);
+            expect(getActiveScheduledMaintenances.mock.calls.length).toBe(fetchCount + 1);
             expect(isModalOpen(element)).toBe(false);
         });
 
