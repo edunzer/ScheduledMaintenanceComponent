@@ -73,7 +73,7 @@ describe('c-scheduled-maintenance-component', () => {
         const getFooterButtons = (element) => element.shadowRoot.querySelectorAll('footer lightning-button');
 
         it('navigates to the Welcome app by default when it is found', async () => {
-            getAppByDeveloperName.mockResolvedValue({ DurableId: '06m000000000001AAA', Label: 'Welcome' });
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
 
             const element = await renderAppLock();
 
@@ -85,7 +85,7 @@ describe('c-scheduled-maintenance-component', () => {
         });
 
         it('looks up the configured exit app and shows its label', async () => {
-            getAppByDeveloperName.mockResolvedValue({ DurableId: '06m000000000002AAA', Label: 'Sales Console' });
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000002AAA', label: 'Sales Console' });
 
             const element = await renderAppLock({ exitAppDeveloperName: 'Sales_Console' });
 
@@ -103,7 +103,7 @@ describe('c-scheduled-maintenance-component', () => {
         });
 
         it('is hidden where the platform cannot navigate to apps, such as Experience Cloud sites', async () => {
-            getAppByDeveloperName.mockResolvedValue({ DurableId: '06m000000000001AAA', Label: 'Welcome' });
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
             mockGenerateUrl.mockResolvedValue(null);
 
             const element = await renderAppLock();
@@ -113,7 +113,7 @@ describe('c-scheduled-maintenance-component', () => {
         });
 
         it('is hidden if building the app URL fails', async () => {
-            getAppByDeveloperName.mockResolvedValue({ DurableId: '06m000000000001AAA', Label: 'Welcome' });
+            getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
             mockGenerateUrl.mockRejectedValue(new Error('Unsupported page reference'));
             const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 

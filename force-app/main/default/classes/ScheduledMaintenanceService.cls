@@ -32,11 +32,24 @@ public with sharing class ScheduledMaintenanceService {
         }
     }
 
-    // Retrieves the app users can go to when this app is locked: its ID for navigation and its label for the button.
+    // The app users can go to when this app is locked: its ID for navigation and its label for the button.
+    // A small wrapper, so the component gets just these two values rather than an AppDefinition record.
+    public class ExitApp {
+        @AuraEnabled public String durableId;
+        @AuraEnabled public String label;
+    }
+
+    // Retrieves the exit app by developer name, or null if there's no such app.
     @AuraEnabled(cacheable=true)
-    public static AppDefinition getAppByDeveloperName(String developerName) {
+    public static ExitApp getAppByDeveloperName(String developerName) {
         List<AppDefinition> apps = [SELECT DurableId, Label FROM AppDefinition WHERE DeveloperName = :developerName LIMIT 1];
-        return apps.isEmpty() ? null : apps[0];
+        if (apps.isEmpty()) {
+            return null;
+        }
+        ExitApp app = new ExitApp();
+        app.durableId = apps[0].DurableId;
+        app.label = apps[0].Label;
+        return app;
     }
 
     // Retrieves the running user's profile name

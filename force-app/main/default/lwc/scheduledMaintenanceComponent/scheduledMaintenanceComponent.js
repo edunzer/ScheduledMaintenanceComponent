@@ -299,11 +299,11 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 if (!app) {
                     return null;
                 }
-                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: app.DurableId } }).then(url => (url ? app : null));
+                return this[NavigationMixin.GenerateUrl]({ type: 'standard__app', attributes: { appTarget: app.durableId } }).then(url => (url ? app : null));
             })
             .then(app => {
-                this.appId = app ? app.DurableId : null;
-                this.appLabel = app ? app.Label : '';
+                this.appId = app ? app.durableId : null;
+                this.appLabel = app ? app.label : '';
             })
             .catch(error => {
                 console.error('Error fetching App ID:', error);

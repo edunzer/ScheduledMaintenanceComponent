@@ -35,7 +35,7 @@ describe('c-scheduled-maintenance-component modal states', () => {
         jest.setSystemTime(NOW);
         localStorage.clear();
         getUserProfileName.mockResolvedValue('Standard User');
-        getAppByDeveloperName.mockResolvedValue({ DurableId: '06m000000000001AAA', Label: 'Welcome' });
+        getAppByDeveloperName.mockResolvedValue({ durableId: '06m000000000001AAA', label: 'Welcome' });
     });
 
     afterEach(() => {

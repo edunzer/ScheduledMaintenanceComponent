@@ -450,13 +450,13 @@ public class ScheduledMaintenanceServiceTest {
         AppDefinition expected = [SELECT DeveloperName, DurableId, Label FROM AppDefinition LIMIT 1];
 
         Test.startTest();
-        AppDefinition app = ScheduledMaintenanceService.getAppByDeveloperName(expected.DeveloperName);
-        AppDefinition missing = ScheduledMaintenanceService.getAppByDeveloperName('NonExistentApp');
+        ScheduledMaintenanceService.ExitApp app = ScheduledMaintenanceService.getAppByDeveloperName(expected.DeveloperName);
+        ScheduledMaintenanceService.ExitApp missing = ScheduledMaintenanceService.getAppByDeveloperName('NonExistentApp');
         Test.stopTest();
 
         Assert.isNotNull(app, 'An app should be returned for a valid developer name');
-        Assert.areEqual(expected.DeveloperName, [SELECT DeveloperName FROM AppDefinition WHERE DurableId = :app.DurableId].DeveloperName, 'The ID should belong to the requested app');
-        Assert.areEqual([SELECT Label FROM AppDefinition WHERE DurableId = :app.DurableId].Label, app.Label, 'The app label should be returned for the button');
+        Assert.areEqual(expected.DeveloperName, [SELECT DeveloperName FROM AppDefinition WHERE DurableId = :app.durableId].DeveloperName, 'The ID should belong to the requested app');
+        Assert.areEqual([SELECT Label FROM AppDefinition WHERE DurableId = :app.durableId].Label, app.label, 'The app label should be returned for the button');
         Assert.isNull(missing, 'No app should be returned for a non-existent developer name');
     }
 
