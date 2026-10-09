@@ -9,7 +9,7 @@ Key features include:
 - Ensuring users remain informed without needing to refresh the page with auto data refresh. 
 - Blocking apps or the system from usage during maintenance time frames
 
-> Blocking users from access can be achieved as long as the component is placed on the appropriate Lightning pages and experience sites. The app context can be defined on the component located on the Lightning page. The targeted maintenance alert can be adjusted in the maintenance record based on the values of the multi-select picklist called `Applicable Apps`.
+> Blocking users from access can be achieved as long as the component is placed on the appropriate Lightning pages and experience sites. The app context can be defined on the component located on the Lightning page. The targeted maintenance alert can be adjusted in the maintenance record based on the values of the multi-select picklist called `Applicable Apps`. The lock is a user-experience control, not access control; see [Limitations](#limitations).
 
 > All components by default have a app context of "System" so any scheduled maintenance records with "system" in the Applicable Apps field will show on every component.
 
@@ -38,6 +38,21 @@ The component enhances user experience by providing timely alerts and essential 
 - **Locale-aware Date/Time Display**: Maintenance start and end times are formatted to the user's local date and time, using their Salesforce-configured locale and timezone.
 - **Applicable Apps Badges**: Each maintenance alert displays the applicable apps as visual badges for clearer context about which systems or applications are affected.
 - **Admin View**: System Administrators see a distinct read-only label instead of the maintenance modal, making it easy to identify the component while editing Lightning pages without triggering maintenance alerts.
+
+## Limitations
+
+The System Lock and App Lock are a user-experience control, not access control. The lock is a modal shown by the component, so it only covers pages that include the component, in a browser tab that has loaded it. During a non-dismissible maintenance, users can still:
+
+- Open records, list views and reports through direct URLs, bookmarks, global search, or any page that doesn't include the component.
+- Use the Salesforce mobile app, or any Lightning or Experience Cloud page without the component.
+- Use the API, Data Loader and integrations, along with any flows and triggers they set off.
+- Remove the modal with the browser's developer tools, or press Tab to reach links and buttons behind it.
+
+That's fine when the lock is a courtesy notice. If data integrity depends on keeping users out during maintenance, add a server-side control as well, for example:
+
+- A Login Flow that blocks or warns non-admin users at login while a System lock is active. This only applies at login, not to sessions that are already open.
+- A "maintenance mode" hierarchy custom setting, turned on for the maintenance window and checked by validation rules or triggers on key objects, with a custom permission that lets admins and integration users bypass it.
+- Temporarily removing permission set assignments from affected users during the window.
 
 ## Examples
 - **Non Dismissable**
