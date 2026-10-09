@@ -2,6 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Alert_Frequency__c</fullName>
     <externalId>false</externalId>
+    <inlineHelpText>How often a dismissed alert is shown again. Every Visit: on the next page load. Daily: on the next calendar day in the user&apos;s time zone. Weekly: 7 days after it was dismissed.</inlineHelpText>
     <label>Alert Frequency</label>
     <required>true</required>
     <trackHistory>false</trackHistory>
