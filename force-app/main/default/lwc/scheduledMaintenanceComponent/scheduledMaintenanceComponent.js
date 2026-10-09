@@ -1,7 +1,8 @@
 import { LightningElement, api } from 'lwc';
 import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanceService.getActiveScheduledMaintenances';
 import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
-import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
+import locale from '@salesforce/i18n/locale';
+import timeZone from '@salesforce/i18n/timeZone';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
 import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
@@ -19,8 +20,9 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     @api title = 'Scheduled Maintenance Alert';
     @api currentAppContext;
     activeSectionName = '';
-    userTimeZone = null;
-    userLocale = null;
+    // The user's Salesforce time zone and locale, available without an Apex call
+    userTimeZone = timeZone;
+    userLocale = locale;
     intervalId = null;
     isAdmin = false;
     profileName = '';
@@ -39,20 +41,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
                 this.isAdmin = false;
             })
             .finally(() => {
-                // Fetch user locale/timezone first, then fetch maintenances
-                getUserLocaleInfo()
-                    .then(info => {
-                        this.userTimeZone = info.timeZone;
-                        this.userLocale = info.locale;
-                    })
-                    .catch(() => {
-                        this.userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                        this.userLocale = navigator.language || 'en-US';
-                    })
-                    .finally(() => {
-                        this.fetchScheduledMaintenances();
-                        this.setupIntervals();
-                    });
+                // Fetches maintenances straight away, then on a schedule
+                this.setupIntervals();
             });
     }
 
