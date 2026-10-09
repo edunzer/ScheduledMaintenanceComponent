@@ -99,34 +99,6 @@ The `Scheduled Maintenance Settings` hierarchy custom setting has a `Maintenance
   - ![Admin status line](./img/redesign-admin-status.png)
   - ![Admin preview of a lock](./img/redesign-admin-preview.png)
 
-## Changelog
-
-### v1.3.0
-
-- **Admin View**: System Administrators now see a distinct read-only view displaying only the component name ("Scheduled Maintenance Component (Admin View)") instead of the full maintenance modal. This makes it easy for admins to identify and locate the component while editing Lightning pages, without being shown maintenance alerts.
-- **Profile-based Access Control**: The component now retrieves the running user's profile name at startup to determine whether to render the admin view or the standard maintenance modal. Users whose profile is `System Administrator` receive the admin view; all others see the normal modal behavior.
-- **New Apex Method – `getUserProfileName`**: A new cacheable Apex method has been added to `ScheduledMaintenanceService` that queries the running user's `Profile.Name`. This supports the profile-based rendering logic in the component.
-- **Initialization Order Update**: The `connectedCallback` lifecycle hook now fetches the user's profile name first, then resolves locale and timezone information, before initiating the maintenance data fetch and refresh intervals.
-
-### v1.2.0
-
-- **Refactored Dismissal Storage**: The localStorage strategy now uses a single key, `scheduledMaintenance_dismissed`, storing an array of objects with the structure `{ recordId, dismissedAt }`. This replaces the previous approach and enables independent per-record dismissal tracking.
-- **Per-Record Dismissal Tracking**: Each maintenance record's dismissal is checked and stored independently, allowing multiple concurrent maintenance alerts to be handled correctly without affecting one another.
-- **Dismiss on Explicit User Action Only**: Dismissals are now only recorded when the user clicks the dismiss button, not when the modal is closed by other means.
-- **Removed Debug Console Logs**: Unnecessary `console.log` statements have been removed from production code for a cleaner, Salesforce Locker Service-compatible implementation.
-- **Improved Error Logging**: Error handling in `fetchAppId` and `navigateToApp` now uses `console.error` for clearer debugging, and localStorage parsing is wrapped in try/catch to gracefully handle malformed data.
-
-### v1.1.0
-
-- **Locale-aware Date/Time Display**: Maintenance start and end times are now formatted using the user's Salesforce locale and timezone settings. The Apex service returns date fields as UTC ISO 8601 strings, which the component then converts to the user's local time for display.
-- **Applicable Apps Badges**: The maintenance modal now displays each applicable app as a visual badge, making it easier to understand which systems are affected by a scheduled maintenance.
-- **User Locale and Timezone Retrieval**: A new Apex method (`getUserLocaleInfo`) retrieves the running user's locale and timezone (`TimeZoneSidKey`, `LocaleSidKey`) to support accurate local date formatting in the component. If retrieval fails, the component falls back to browser defaults.
-- **UTC Date Handling in Apex**: The `getActiveScheduledMaintenances` method now returns a list of plain objects with all date fields formatted as UTC ISO 8601 strings (`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`), ensuring consistent timezone-safe date handling on the client side.
-- **SOQL Injection Prevention**: Filter values passed to the SOQL query are now escaped using `String.escapeSingleQuotes()`, preventing potential SOQL injection vulnerabilities.
-- **SOQL Error Handling**: The `getActiveScheduledMaintenances` method now wraps the database query in a try/catch block, returning an empty list on failure instead of throwing an unhandled exception.
-- **SOQL Datetime Formatting**: The current datetime used in the SOQL query is now formatted in ISO 8601 format (`yyyy-MM-dd'T'HH:mm:ss'Z'`) for accurate querying of scheduled maintenance records.
-- **Code Comment Fix**: The comment in `disconnectedCallback` now correctly describes that a timeout is cleared (not an interval).
-
 ## Documentation
 
 For more information please checkout the [Wiki](https://github.com/edunzer/ScheduledMaintenanceComponent/wiki) for this repo. It includes information like:
