@@ -14,6 +14,7 @@
             <property name="title" type="String" default="Scheduled Maintenance Alert" label="Alert Title" description="Title of the popup while a maintenance is in progress."/>
             <property name="reminderTitle" type="String" default="Scheduled Maintenance Reminder" label="Reminder Title" description="Title of the popup when maintenances are upcoming but none is in progress yet."/>
             <property name="currentAppContext" type="String" datasource="apex://ScheduledMaintenanceAppPicklist" label="Current App Context" description="The Applicable Apps value for this page. Maintenances for this app and for System are shown; leave blank to show System maintenances only."/>
+            <property name="alertStyle" type="String" datasource="Dialog,Banner" default="Dialog" label="Alert Style" description="How alerts that can be dismissed are shown: a dialog over the page, or a banner in the component&apos;s place on the page. Locks always use a dialog."/>
             <property name="exitAppDeveloperName" type="String" default="Welcome" label="Exit App Developer Name" description="Developer name of the app users can navigate to when this app is locked. The button is hidden if no app with this name is found. Not used on Experience Cloud sites."/>
         </targetConfig>
     </targetConfigs>

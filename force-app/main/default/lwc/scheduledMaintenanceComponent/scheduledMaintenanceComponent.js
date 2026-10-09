@@ -45,6 +45,10 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     @api reminderTitle = 'Scheduled Maintenance Reminder';
     @api currentAppContext;
     @api exitAppDeveloperName = 'Welcome';
+    // 'Dialog' or 'Banner': how alerts that can be dismissed are shown. Locks always use the dialog.
+    @api alertStyle = 'Dialog';
+    // Whether the user opened the dialog from the banner's "View details" link
+    detailsOpen = false;
     // The user's Salesforce time zone and locale, available without an Apex call
     userTimeZone = timeZone;
     userLocale = locale;
@@ -157,6 +161,39 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     // Whether any shown maintenance is in progress; recalculated whenever the records are re-evaluated.
     get isInMaintenance() {
         return this.inProgressMaintenances.length > 0;
+    }
+
+    // With the Banner style, dismissible alerts show as a banner until the user opens the details.
+    get showBanner() {
+        return this.isModalOpen && this.isDismissible && this.alertStyle === 'Banner' && !this.detailsOpen;
+    }
+    get showDialog() {
+        return this.isModalOpen && !this.showBanner;
+    }
+    // Warning colors while a maintenance is in progress, info colors for upcoming ones
+    get bannerClass() {
+        return this.isInMaintenance ? 'slds-notify slds-notify_alert slds-alert_warning' : 'slds-notify slds-notify_alert';
+    }
+    get bannerIcon() {
+        return this.isInMaintenance ? 'utility:warning' : 'utility:info';
+    }
+    // White icons on the dark info background, dark ones on the light warning background
+    get bannerIconVariant() {
+        return this.isInMaintenance ? '' : 'inverse';
+    }
+    get bannerCloseClass() {
+        return this.isInMaintenance ? 'slds-button slds-button_icon slds-button_icon-small' : 'slds-button slds-button_icon slds-button_icon-small slds-button_icon-inverse';
+    }
+    // "Scheduled Maintenance Reminder: CRM upgrade · Mon, Mar 16, 4:00 – 6:00 PM PDT", or a count for several
+    get bannerMessage() {
+        const records = this.scheduledMaintenances;
+        if (records.length === 1) {
+            return `${this.modalTitle}: ${records[0].Subject} · ${records[0].dateRange}`;
+        }
+        return `${this.modalTitle}: ${records.length} maintenances`;
+    }
+    openDetails() {
+        this.detailsOpen = true;
     }
 
     // "Happening now" / "Coming up" headings are only needed when there are both.
@@ -278,6 +315,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         recordIds.forEach(recordId => this.dismissedThisVisit.add(recordId));
         this.saveDismissals(addDismissals(this.loadDismissals(), recordIds, new Date()));
         this.isModalOpen = false;
+        this.detailsOpen = false;
     }
 
     // Loads this user's dismissals ({ recordId, dismissedAt }) from localStorage.

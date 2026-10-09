@@ -6,8 +6,23 @@
             <span class="slds-text-title_caps admin-view__label">Scheduled Maintenance Component (Admin View)</span>
         </div>
     </template>
-    <!-- Non-admin view: show modal as normal -->
-    <template lwc:elseif={isModalOpen}>
+    <!-- Banner style: a dismissible alert shown in the component's place on the page -->
+    <template lwc:elseif={showBanner}>
+        <div class={bannerClass} role="status">
+            <lightning-icon icon-name={bannerIcon} size="x-small" variant={bannerIconVariant} alternative-text="Scheduled maintenance" class="slds-m-right_x-small"></lightning-icon>
+            <h2>
+                {bannerMessage}
+                <button class="slds-button slds-m-left_x-small banner-link" onclick={openDetails}>View details</button>
+            </h2>
+            <div class="slds-notify__close">
+                <button class={bannerCloseClass} title="Dismiss" onclick={dismissAllRecords}>
+                    <lightning-icon icon-name="utility:close" size="x-small" variant={bannerIconVariant} alternative-text="Dismiss"></lightning-icon>
+                </button>
+            </div>
+        </div>
+    </template>
+    <!-- Dialog: locks, and dismissible alerts unless they use the banner -->
+    <template lwc:elseif={showDialog}>
         <!-- Focus guards keep Tab and Shift+Tab inside the dialog -->
         <div tabindex="0" aria-hidden="true" onfocus={handleFocusStartGuard}></div>
         <section role={dialogRole} tabindex="-1" aria-modal="true" aria-labelledby="modal-heading" aria-describedby="modal-content" class="slds-modal slds-fade-in-open" onkeydown={handleDialogKeyDown}>

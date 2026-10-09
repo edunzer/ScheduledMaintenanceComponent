@@ -16,3 +16,10 @@
     align-items: center;
     justify-content: center;
 }
+
+/* The banner's link takes the banner's text color, like SLDS alert links */
+.banner-link {
+    color: inherit;
+    text-decoration: underline;
+    vertical-align: baseline;
+}

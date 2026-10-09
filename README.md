@@ -24,7 +24,7 @@ The component enhances user experience by providing timely alerts and essential 
   - Refreshes again when the user returns to the tab.
   - Between refreshes, alerts and locks still start and end on time: maintenances starting within the next 35 minutes are loaded ahead, and the component re-checks at each alert, start and end time.
 - **Maintenance Alerts**:
-  - Displays a modal dialog with maintenance alerts.
+  - Displays maintenance alerts in a dialog. With the `Alert Style` property set to `Banner`, alerts that can be dismissed show as a banner in the component's place on the page instead, with a link to the details. Locks always use the dialog.
   - Alerts are shown based on the maintenance schedule and user interaction history.
 - **Dismissible Alerts**: Allows users to dismiss alerts, with the option to not allow dismiss during the maintenance time frame.
 - **Alert Frequency**: Controls when a dismissed alert is shown again, using browser cache data:
