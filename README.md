@@ -56,7 +56,7 @@ The System Lock and App Lock are a user-experience control, not access control. 
 - Open records, list views and reports through direct URLs, bookmarks, global search, or any page that doesn't include the component.
 - Use the Salesforce mobile app, or any Lightning or Experience Cloud page without the component.
 - Use the API, Data Loader and integrations, along with any flows and triggers they set off.
-- Remove the modal with the browser's developer tools, or press Tab to reach links and buttons behind it.
+- Remove the modal with the browser's developer tools.
 
 That's fine when the lock is a courtesy notice. If data integrity depends on keeping users out during maintenance, add a server-side control as well, for example:
 

@@ -38,6 +38,8 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     boundaryTimeoutId = null;
     isAdmin = false;
     isDisconnected = false;
+    // Whether focus has been moved into the currently open dialog
+    dialogFocused = false;
 
     // Lifecycle hook that's called after the component is inserted into the DOM.
     connectedCallback() {
@@ -68,6 +70,36 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         }
         clearTimeout(this.boundaryTimeoutId);
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+
+    // Moves focus into the dialog when it opens, so keyboard and screen reader users start inside it.
+    renderedCallback() {
+        const dialog = this.template.querySelector('section[role="dialog"]');
+        if (!dialog) {
+            this.dialogFocused = false;
+        } else if (!this.dialogFocused) {
+            this.dialogFocused = true;
+            dialog.focus();
+        }
+    }
+
+    // Escape closes the dialog, but only when the alert can be dismissed.
+    handleDialogKeyDown(event) {
+        if (event.key === 'Escape' && this.isDismissible) {
+            event.stopPropagation();
+            this.dismissAllRecords();
+        }
+    }
+
+    // Shift+Tab from the top of the dialog wraps to its last control: the footer button, if there is one.
+    handleFocusStartGuard() {
+        const footerButton = this.template.querySelector('footer lightning-button');
+        (footerButton || this.template.querySelector('section[role="dialog"]')).focus();
+    }
+
+    // Tab past the last control wraps to the top of the dialog.
+    handleFocusEndGuard() {
+        this.template.querySelector('section[role="dialog"]').focus();
     }
 
     // Fetches the scheduled maintenances from Apex
