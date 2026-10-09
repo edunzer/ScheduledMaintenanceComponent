@@ -3,6 +3,7 @@ import getActiveScheduledMaintenances from '@salesforce/apex/ScheduledMaintenanc
 import getAppIdByDeveloperName from '@salesforce/apex/ScheduledMaintenanceService.getAppIdByDeveloperName';
 import getUserLocaleInfo from '@salesforce/apex/ScheduledMaintenanceService.getUserLocaleInfo';
 import getUserProfileName from '@salesforce/apex/ScheduledMaintenanceService.getUserProfileName';
+import communityId from '@salesforce/community/Id';
 import { NavigationMixin } from 'lightning/navigation';
 // Extends LightningElement to create a custom element.
 export default class ScheduledMaintenanceComponent extends NavigationMixin(LightningElement) {
@@ -18,6 +19,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     upcomingMaintenances = [];
     @api title = 'Scheduled Maintenance Alert';
     @api currentAppContext;
+    @api exitAppDeveloperName = 'Welcome';
     activeSectionName = '';
     userTimeZone = null;
     userLocale = null;
@@ -200,15 +202,25 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
         }
         return now < startDate || record.Dismissible__c; 
     }    
-    // Fetches the app ID for navigation purposes.
+    // Fetches the app ID for navigation purposes. App navigation isn't available on Experience Cloud sites.
     fetchAppId() {
-        getAppIdByDeveloperName({ developerName: 'Welcome' })
+        if (communityId || !this.exitAppDeveloperName) {
+            return;
+        }
+        getAppIdByDeveloperName({ developerName: this.exitAppDeveloperName })
             .then(result => {
                 this.appId = result;
             })
             .catch(error => {
                 console.error('Error fetching App ID:', error);
             });
+    }
+    // The exit button is only shown once the target app has been found.
+    get showExitButton() {
+        return !!this.appId;
+    }
+    get exitButtonLabel() {
+        return `Navigate to ${this.exitAppDeveloperName} App`;
     }
     // Navigates to another app based on the fetched app ID.
     navigateToApp() {

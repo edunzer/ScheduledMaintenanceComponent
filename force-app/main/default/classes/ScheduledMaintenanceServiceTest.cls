@@ -334,12 +334,14 @@ public class ScheduledMaintenanceServiceTest {
 
     @IsTest
     static void testGetAppIdByDeveloperName() {
+        // Look up an app that exists in this org rather than assuming a specific one (like 'Welcome') is installed
+        AppDefinition app = [SELECT DeveloperName FROM AppDefinition LIMIT 1];
+
         Test.startTest();
 
-        // This part of the test can only validate behavior, assuming the data exists in the actual org
-        // Here we simply call the method assuming the data exists
-        String appId = ScheduledMaintenanceService.getAppIdByDeveloperName('Welcome');
+        String appId = ScheduledMaintenanceService.getAppIdByDeveloperName(app.DeveloperName);
         System.assertNotEquals(null, appId, 'App ID should not be null for valid developer name');
+        System.assertEquals(app.DeveloperName, [SELECT DeveloperName FROM AppDefinition WHERE DurableId = :appId].DeveloperName, 'App ID should belong to the requested app');
 
         appId = ScheduledMaintenanceService.getAppIdByDeveloperName('NonExistentApp');
         System.assertEquals(null, appId, 'App ID should be null for non-existent developer name');
