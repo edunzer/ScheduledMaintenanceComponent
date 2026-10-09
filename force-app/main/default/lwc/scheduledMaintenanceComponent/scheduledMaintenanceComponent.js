@@ -18,6 +18,7 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
     inProgressMaintenances = [];
     upcomingMaintenances = [];
     @api title = 'Scheduled Maintenance Alert';
+    @api reminderTitle = 'Scheduled Maintenance Reminder';
     @api currentAppContext;
     @api exitAppDeveloperName = 'Welcome';
     activeSectionName = '';
@@ -156,9 +157,13 @@ export default class ScheduledMaintenanceComponent extends NavigationMixin(Light
             }
             return false;
         });
-        this.title = this.isInMaintenance ? 'Scheduled Maintenance Alert' : 'Scheduled Maintenance Reminder';
         this.updateDismissibleStatus();
         this.isModalOpen = allRecords.length > 0;
+    }
+
+    // The configured alert title while a maintenance is in progress, otherwise the reminder title.
+    get modalTitle() {
+        return this.isInMaintenance ? this.title : this.reminderTitle;
     }
 
     // Setup intervals for fetching data
