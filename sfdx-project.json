@@ -2,11 +2,20 @@
   "packageDirectories": [
     {
       "path": "force-app",
-      "default": true
+      "default": true,
+      "package": "Scheduled Maintenance Component",
+      "versionName": "2.1.0",
+      "versionNumber": "2.1.0.NEXT",
+      "versionDescription": "Scheduled maintenance alerts and app locks for Lightning pages and Experience Cloud sites.",
+      "definitionFile": "config/project-scratch-def.json"
     }
   ],
   "name": "ScheduledMaintenanceComponent",
   "namespace": "",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "59.0"
+  "sourceApiVersion": "59.0",
+  "packageAliases": {
+    "Scheduled Maintenance Component": "0Hobm00000074gPCAQ",
+    "Scheduled Maintenance Component@2.1.0-1": "04tbm000000nVlpAAE"
+  }
 }
