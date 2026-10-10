@@ -43,13 +43,15 @@ The component enhances user experience by providing timely alerts and essential 
 
 ## Installation
 
-Install the unmanaged package, version **2.0.0**:
+Install the unlocked package, version **2.1.0**:
 
-- Production or Developer Edition: https://login.salesforce.com/packaging/installPackage.apexp?p0=04tbm000000nTfBAAU
-- Sandbox: https://test.salesforce.com/packaging/installPackage.apexp?p0=04tbm000000nTfBAAU
-- Or with the Salesforce CLI: `sf package install --package 04tbm000000nTfBAAU --target-org <your org> --wait 20`
+- Production or Developer Edition: https://login.salesforce.com/packaging/installPackage.apexp?p0=04tbm000000nVlpAAE
+- Sandbox: https://test.salesforce.com/packaging/installPackage.apexp?p0=04tbm000000nVlpAAE
+- Or with the Salesforce CLI: `sf package install --package 04tbm000000nVlpAAE --target-org <your org> --wait 20`
 
 Choose **Install for Admins Only**; access for everyone else comes from the permission sets.
+
+The package has no namespace, so the API names are the same as in this repo. It can't be installed into an org that has its own namespace.
 
 After installing:
 
@@ -59,7 +61,17 @@ After installing:
 4. Add the **Scheduled Maintenance** tab to an app for the people who create maintenance records.
 5. Optional: set up a server-side lock with **Maintenance Mode** (see [Limitations](#limitations)).
 
-> Unmanaged packages can't be upgraded: the installed components become ordinary metadata in your org, and installing a newer version over them fails because they already exist. To update an org, deploy the newer source from this repo instead (`sf project deploy start --source-dir force-app`). Uninstalling the package deletes the component, the object and all maintenance records.
+Uninstalling the package deletes the component, the object and all maintenance records. Remove the assignments of the package's permission sets first; the uninstall fails while they're assigned.
+
+### Upgrading
+
+Install the newer version over the installed one, with its install link or `sf package install`. Maintenance records and the Maintenance Mode settings are kept.
+
+An upgrade replaces the package's components with the new version's, even ones that didn't change, so changes you made to them are lost. For example, edits to the **Scheduled Maintenance Layout** page layout are undone. To customize the page layout or the record page, copy it and assign your copy instead. **Applicable Apps** values are the exception: values you add are kept, and values you delete aren't added back.
+
+### If you installed version 2.0.0
+
+Version 2.0.0 was an unmanaged package. Install 2.1.0 over it as above; your maintenance records are kept. Both versions are then listed under **Installed Packages**. Leave the 2.0.0 entry there: uninstalling it deletes the component, the object and all maintenance records, even with 2.1.0 installed.
 
 ## Permissions
 
@@ -121,20 +133,19 @@ The `Scheduled Maintenance Settings` hierarchy custom setting has a `Maintenance
 
 ## Releasing a new package version
 
-The unmanaged package, **Scheduled Maintenance Component** (`033bm000000y0jVAAQ`), lives in the packaging org. `manifest/unmanaged-package.xml` lists every component in it; its `<fullName>` adds deployed components to the package.
+The unlocked package, **Scheduled Maintenance Component** (`0Hobm00000074gPCAQ`, no namespace), is owned by the Dev Hub and built from `force-app`.
 
-1. Deploy the components into the packaging org. Converting the source drops the `<fullName>`, so copy the manifest back in as `package.xml` before deploying:
+1. Set `versionNumber` and `versionName` in `sfdx-project.json` to the new version, for example `2.2.0.NEXT` and `2.2.0`.
+2. Build the version. This builds the package in a temporary org from `config/project-scratch-def.json`, runs the Apex tests, and adds the new `04t` ID to `packageAliases` in `sfdx-project.json`; commit that change:
    ```sh
-   sf project convert source --manifest manifest/unmanaged-package.xml --output-dir .package-build
-   cp manifest/unmanaged-package.xml .package-build/package.xml
-   sf project deploy start --metadata-dir .package-build --target-org <packaging org>
+   sf package version create --package "Scheduled Maintenance Component" --installation-key-bypass --code-coverage --wait 30 --target-dev-hub <Dev Hub>
    ```
-   If you add components to `force-app`, regenerate the manifest with `sf project generate manifest --source-dir force-app --name unmanaged-package --output-dir manifest` and add the `<fullName>Scheduled Maintenance Component</fullName>` line back.
-2. Upload a version. This runs the Apex tests in the packaging org and returns the new `04t` ID:
+3. The new version is a beta, which only installs in scratch orgs and sandboxes. Install it into a new scratch org, and into one that has the previous released version, to check a fresh install and an upgrade.
+4. Promote it, so it can be installed in production orgs:
    ```sh
-   sf package1 version create --package-id 033bm000000y0jVAAQ --name "<version>" --wait 30 --target-org <packaging org>
+   sf package version promote --package "Scheduled Maintenance Component@2.2.0-1" --target-dev-hub <Dev Hub>
    ```
-3. Install the version into a new org to check it, update the install links above, and publish a GitHub release with the release notes.
+5. Update the install links above, and publish a GitHub release with the release notes.
 
 ## Documentation
 
